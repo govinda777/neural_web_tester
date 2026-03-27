@@ -2,6 +2,7 @@ import unittest
 import numpy as np
 from memory import cosine_similarity, SemanticMemory
 
+
 class TestMemory(unittest.TestCase):
     def test_cosine_similarity(self):
         v1 = np.array([1, 0, 0])
@@ -34,5 +35,6 @@ class TestMemory(unittest.TestCase):
             v2 = np.random.rand(1280)
         self.assertTrue(memory.is_new_state(v2))
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

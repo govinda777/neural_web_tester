@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def cosine_similarity(v1, v2):
     """Calcula a similaridade de cosseno entre dois vetores."""
     # Garante que os vetores sejam numpy arrays
@@ -16,6 +17,7 @@ def cosine_similarity(v1, v2):
         return 0.0
 
     return dot_product / (norm_v1 * norm_v2)
+
 
 class SemanticMemory:
     def __init__(self, threshold=0.98):

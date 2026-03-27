@@ -1,10 +1,12 @@
-import asyncio
+import os
 from playwright.async_api import async_playwright
 import re
+
 
 class BrowserManager:
     def __init__(self, token=None):
         self.token = token
+        self.headless = os.getenv("HEADLESS", "true").lower() == "true"
         self.playwright = None
         self.browser = None
         self.context = None
@@ -15,7 +17,7 @@ class BrowserManager:
     async def start(self, url):
         """Inicia o Playwright e abre a página com injeção de JWT."""
         self.playwright = await async_playwright().start()
-        self.browser = await self.playwright.chromium.launch(headless=True)
+        self.browser = await self.playwright.chromium.launch(headless=self.headless)
 
         # Injeção de JWT nos headers globais
         extra_headers = {}
@@ -23,14 +25,15 @@ class BrowserManager:
             extra_headers["Authorization"] = f"Bearer {self.token}"
 
         self.context = await self.browser.new_context(
-            extra_http_headers=extra_headers,
-            viewport={'width': 1280, 'height': 720}
+            extra_http_headers=extra_headers, viewport={"width": 1280, "height": 720}
         )
 
         self.page = await self.context.new_page()
 
         # Captura logs do console
-        self.page.on("console", lambda msg: self.console_logs.append(f"[{msg.type}] {msg.text}"))
+        self.page.on(
+            "console", lambda msg: self.console_logs.append(f"[{msg.type}] {msg.text}")
+        )
 
         # Captura erros de rede (4xx, 5xx)
         self.page.on("response", self._handle_response)
@@ -55,9 +58,11 @@ class BrowserManager:
         interactive_actions = []
         url = self.page.url
         if url.startswith("file://"):
-            current_domain = "localhost" # Trata arquivos locais como localhost para teste
+            current_domain = (
+                "localhost"  # Trata arquivos locais como localhost para teste
+            )
         else:
-            domain_match = re.search(r'https?://([^/]+)', url)
+            domain_match = re.search(r"https?://([^/]+)", url)
             current_domain = domain_match.group(1) if domain_match else ""
 
         for el in elements:
@@ -68,28 +73,37 @@ class BrowserManager:
             # Para links, verifica se leva ao mesmo domínio
             href = await el.get_attribute("href")
             if href:
-                if href.startswith("http") and current_domain and current_domain not in href:
-                    continue # Ignora links externos
+                if (
+                    href.startswith("http")
+                    and current_domain
+                    and current_domain not in href
+                ):
+                    continue  # Ignora links externos
                 if href.startswith("#") or href.startswith("javascript:"):
-                    continue # Ignora âncoras internas e scripts diretos
+                    continue  # Ignora âncoras internas e scripts diretos
 
             # Priorização básica baseada em texto
             text = (await el.inner_text()).lower()
             tag = await el.evaluate("el => el.tagName.toLowerCase()")
 
             priority = 1
-            high_priority_keywords = ["save", "submit", "menu", "enviar", "salvar", "entrar", "login"]
+            high_priority_keywords = [
+                "save",
+                "submit",
+                "menu",
+                "enviar",
+                "salvar",
+                "entrar",
+                "login",
+            ]
             if any(kw in text for kw in high_priority_keywords):
                 priority = 3
             elif tag == "button" or tag == "a":
                 priority = 2
 
-            interactive_actions.append({
-                "element": el,
-                "text": text,
-                "priority": priority,
-                "tag": tag
-            })
+            interactive_actions.append(
+                {"element": el, "text": text, "priority": priority, "tag": tag}
+            )
 
         # Ordena por prioridade (maior primeiro)
         interactive_actions.sort(key=lambda x: x["priority"], reverse=True)
