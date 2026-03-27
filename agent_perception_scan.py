@@ -3,6 +3,7 @@ import os
 import datetime
 from navigation import BrowserManager
 
+
 async def perform_perception_scan():
     url = f"file://{os.path.abspath('test_site.html')}"
     browser = BrowserManager()
@@ -49,7 +50,9 @@ async def perform_perception_scan():
     missing_buttons = [b for b in expected_buttons if b not in found_button_ids]
 
     total_expected = len(expected_inputs) + len(expected_buttons)
-    total_found = (len(expected_inputs) - len(missing_inputs)) + (len(expected_buttons) - len(missing_buttons))
+    total_found = (len(expected_inputs) - len(missing_inputs)) + (
+        len(expected_buttons) - len(missing_buttons)
+    )
 
     success_rate = (total_found / total_expected) * 100 if total_expected > 0 else 100
 
@@ -104,6 +107,7 @@ O agente identificou {success_rate:.0f}% dos elementos esperados.
         f.write(report_content)
 
     print("Relatório 'latest_scan_report.md' gerado com sucesso.")
+
 
 if __name__ == "__main__":
     asyncio.run(perform_perception_scan())

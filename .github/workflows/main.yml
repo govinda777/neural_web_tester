@@ -15,6 +15,8 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -46,4 +48,5 @@ jobs:
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
         git add reports/latest_scan_report.md
         git diff --quiet && git diff --staged --quiet || git commit -m "docs: update latest perception scan report"
+        git pull --rebase origin ${{ github.head_ref || github.ref_name }}
         git push origin HEAD:${{ github.head_ref || github.ref_name }} || echo "Push failed or nothing to push"
