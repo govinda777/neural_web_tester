@@ -3,10 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <title>Mock Site para Testes</title>
+    <style>
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid black; padding: 8px; text-align: left; }
+    </style>
 </head>
 <body>
     <h1>Página Principal</h1>
     <p>Bem-vindo ao site de teste do Agente Autônomo.</p>
+
+    <div id="form-section">
+        <h2>Formulário de Contato</h2>
+        <form id="contact-form">
+            <label for="name">Nome:</label>
+            <input type="text" id="name" name="name"><br><br>
+            <label for="email">Email:</label>
+            <input type="email" id="email" name="email"><br><br>
+            <button type="submit" id="submit-btn">Enviar</button>
+            <button type="button" id="disabled-btn" disabled>Desabilitado</button>
+        </form>
+    </div>
+
+    <div id="services-section">
+        <h2>Tabela de Serviços</h2>
+        <table id="services-table">
+            <thead>
+                <tr>
+                    <th>Serviço</th>
+                    <th>Preço</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Análise de DOM</td>
+                    <td>R$ 100,00</td>
+                </tr>
+                <tr>
+                    <td>Varredura de Vulnerabilidades</td>
+                    <td>R$ 500,00</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
 
     <button id="save-btn">Salvar</button>
     <a href="test_site.html#secao2" id="internal-link">Seção 2</a>
