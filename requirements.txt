@@ -5,3 +5,5 @@ numpy
 Pillow
 pytest
 pytest-asyncio
+ruff
+python-dotenv

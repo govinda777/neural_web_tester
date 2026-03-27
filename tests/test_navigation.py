@@ -3,6 +3,7 @@ import asyncio
 import os
 from navigation import BrowserManager
 
+
 class TestNavigation(unittest.TestCase):
     def setUp(self):
         self.loop = asyncio.new_event_loop()
@@ -19,7 +20,12 @@ class TestNavigation(unittest.TestCase):
             await self.browser_manager.start(self.test_file_path)
 
             # Captura de logs de console
-            self.assertTrue(any("Este é um erro de console planejado!" in log for log in self.browser_manager.console_logs))
+            self.assertTrue(
+                any(
+                    "Este é um erro de console planejado!" in log
+                    for log in self.browser_manager.console_logs
+                )
+            )
 
             # Screenshot não vazio
             screenshot = await self.browser_manager.capture_state()
@@ -31,15 +37,16 @@ class TestNavigation(unittest.TestCase):
 
             # Verificação de prioridades
             # "Salvar" deve ter prioridade 3
-            save_btn = next((a for a in actions if "salvar" in a['text']), None)
+            save_btn = next((a for a in actions if "salvar" in a["text"]), None)
             self.assertIsNotNone(save_btn)
-            self.assertEqual(save_btn['priority'], 3)
+            self.assertEqual(save_btn["priority"], 3)
 
             # Link para o Google deve ser ignorado (externo)
-            google_link = next((a for a in actions if "google" in a['text']), None)
+            google_link = next((a for a in actions if "google" in a["text"]), None)
             self.assertIsNone(google_link)
 
         self.loop.run_until_complete(run_test())
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()
