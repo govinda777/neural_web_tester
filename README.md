@@ -20,7 +20,7 @@ O objetivo é automatizar o teste de "sanidade" (smoke testing) e a descoberta d
 
 2. Instale as dependências:
    ```bash
-   make install
+   task install
    ```
 
 3. Configure o ambiente:
@@ -54,12 +54,12 @@ python agent.py --url https://exemplo.com --steps 10
 
 ## 🧪 Desenvolvimento e Automação
 
-O projeto utiliza um `Makefile` para padronizar comandos comuns:
+O projeto utiliza o **Task** (`Taskfile.yml`) de forma multiplataforma (Windows, Linux, macOS) para padronizar comandos comuns:
 
-- `make install`: Instala dependências Python e navegadores Playwright.
-- `make test`: Executa todos os testes unitários.
-- `make lint`: Verifica o estilo do código usando **Ruff**.
-- `make clean`: Limpa caches, logs e arquivos temporários.
+- `task install`: Instala dependências Python e navegadores Playwright.
+- `task test`: Executa todos os testes unitários via pytest. Use `task test REPORT=true` para abrir o relatório após a execução.
+- `task lint`: Verifica o estilo do código usando **Ruff**.
+- `task clean`: Limpa caches recursivos, logs e arquivos temporários.
 
 ## ⚠️ Troubleshooting (Resolução de Problemas)
 

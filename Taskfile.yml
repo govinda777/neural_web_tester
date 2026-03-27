@@ -1,0 +1,52 @@
+version: '3'
+
+vars:
+  PYTHON: '{{if eq OS "windows"}}py -3.12{{else}}python3{{end}}'
+
+tasks:
+  install:
+    desc: "Instala as dependências do Python e o navegador para o Playwright"
+    cmds:
+      - '{{.PYTHON}} -m pip install -r requirements.txt'
+      - '{{.PYTHON}} -m playwright install chromium'
+
+  test:
+    desc: "Executa a suíte de testes. Parâmetro (REPORT=true) para abrir o relatório após a execução."
+    env:
+      PYTHONPATH: .
+    vars:
+      REPORT: '{{default "false" .REPORT}}'
+    cmds:
+      - '{{.PYTHON}} -m pytest tests/ --html=reports/test_report.html --self-contained-html'
+      - cmd: '{{if eq .REPORT "true"}}powershell -Command "Start-Process reports/test_report.html"{{end}}'
+        platforms: [windows]
+        ignore_error: true
+      - cmd: '{{if eq .REPORT "true"}}open reports/test_report.html{{end}}'
+        platforms: [darwin]
+        ignore_error: true
+      - cmd: '{{if eq .REPORT "true"}}xdg-open reports/test_report.html{{end}}'
+        platforms: [linux]
+        ignore_error: true
+
+  lint:
+    desc: "Executa a verificação e formatação de estilo (Ruff)"
+    cmds:
+      - '{{.PYTHON}} -m ruff check .'
+      - '{{.PYTHON}} -m ruff format --check .'
+
+  clean:
+    desc: "Remove arquivos temporários, logs e caches"
+    cmds:
+      - cmd: rm -rf screenshots videos .pytest_cache .ruff_cache reports/test_report.html
+        platforms: [linux, darwin]
+      - cmd: find . -type d -name "__pycache__" -exec rm -rf {} +
+        platforms: [linux, darwin]
+      - cmd: find . -type f -name "*.log" -delete
+        platforms: [linux, darwin]
+      # Comandos nativos para Windows (PowerShell)
+      - cmd: powershell -Command "Remove-Item -Recurse -Force screenshots, videos, reports/test_report.html, .pytest_cache, .ruff_cache -ErrorAction SilentlyContinue"
+        platforms: [windows]
+      - cmd: powershell -Command "Get-ChildItem -Path . -Include __pycache__ -Recurse -Directory -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force"
+        platforms: [windows]
+      - cmd: powershell -Command "Get-ChildItem -Path . -Include *.log -Recurse -File -ErrorAction SilentlyContinue | Remove-Item -Force"
+        platforms: [windows]

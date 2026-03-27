@@ -1,61 +1,421 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>Mock Site para Testes</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mock Site: Dashboard Neural</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
     <style>
-        table { border-collapse: collapse; width: 100%; }
-        th, td { border: 1px solid black; padding: 8px; text-align: left; }
+        :root {
+            --bg-color: #0f172a;
+            --surface-color: rgba(30, 41, 59, 0.7);
+            --primary: #8b5cf6;
+            --primary-hover: #7c3aed;
+            --secondary: #06b6d4;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-color: rgba(255, 255, 255, 0.1);
+            --danger: #ef4444;
+            --success: #10b981;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            min-height: 100vh;
+            overflow-x: hidden;
+            background-image: radial-gradient(circle at top right, rgba(139, 92, 246, 0.15), transparent 40%),
+                              radial-gradient(circle at bottom left, rgba(6, 182, 212, 0.1), transparent 40%);
+        }
+
+        /* Sidebar Nav */
+        nav.sidebar {
+            width: 280px;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(12px);
+            border-right: 1px solid var(--border-color);
+            padding: 2rem 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            position: fixed;
+            height: 100vh;
+            z-index: 10;
+        }
+
+        .brand {
+            font-size: 1.8rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .nav-link {
+            text-decoration: none;
+            color: var(--text-main);
+            padding: 1rem;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: transparent;
+        }
+
+        .nav-link:hover, .nav-link.active {
+            background: rgba(139, 92, 246, 0.2);
+            transform: translateX(5px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .nav-link.external {
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+
+        /* Main Content */
+        main {
+            margin-left: 280px;
+            padding: 3rem;
+            flex-grow: 1;
+            max-width: 1400px;
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 3rem;
+        }
+
+        h1 { font-size: 2.5rem; font-weight: 800; }
+        
+        .badge {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        /* Bento Grid */
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            background: var(--surface-color);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 2.5rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+            border-color: rgba(139, 92, 246, 0.4);
+        }
+
+        .card h2 {
+            margin-bottom: 1.5rem;
+            font-size: 1.5rem;
+            color: var(--secondary);
+        }
+
+        /* Form Elements */
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        input[type="text"], input[type="email"], select, textarea {
+            width: 100%;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            color: white;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            outline: none;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+            color: white;
+            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
+        }
+
+        .btn-primary:hover {
+            transform: scale(1.02);
+            box-shadow: 0 6px 20px rgba(139, 92, 246, 0.6);
+        }
+
+        .btn-disabled {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-muted);
+            cursor: not-allowed;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* Interactive Elements for Test */
+        .interactive-controls {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+        
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+        
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(0,0,0,0.5);
+            transition: .4s;
+            border-radius: 34px;
+            border: 1px solid var(--border-color);
+        }
+        
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px; width: 26px;
+            left: 3px; bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .slider { background-color: var(--success); }
+        input:checked + .slider:before { transform: translateX(26px); }
+
+        /* Complex Table */
+        .table-container {
+            overflow-x: auto;
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 1.2rem;
+            color: var(--secondary);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 1px;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        td {
+            padding: 1.2rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            color: var(--text-main);
+        }
+        
+        tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
     </style>
 </head>
 <body>
-    <h1>Página Principal</h1>
-    <p>Bem-vindo ao site de teste do Agente Autônomo.</p>
 
-    <div id="form-section">
-        <h2>Formulário de Contato</h2>
-        <form id="contact-form">
-            <label for="name">Nome:</label>
-            <input type="text" id="name" name="name"><br><br>
-            <label for="email">Email:</label>
-            <input type="email" id="email" name="email"><br><br>
-            <button type="submit" id="submit-btn">Enviar</button>
-            <button type="button" id="disabled-btn" disabled>Desabilitado</button>
-        </form>
-    </div>
+    <nav class="sidebar">
+        <div class="brand">🧪 Neural QA</div>
+        <a href="test_site.html" class="nav-link active">Dashboard</a>
+        <a href="about_site.html" class="nav-link">Sobre o Sistema</a>
+        <a href="dashboard_site.html" class="nav-link">Análise Profunda</a>
+        
+        <div style="margin-top: auto;">
+            <!-- O teste do python espera que esse link seja ignorado -->
+            <a href="https://google.com" target="_blank" class="nav-link external" id="external-link">
+                ↗ Sair para Google
+            </a>
+        </div>
+    </nav>
 
-    <div id="services-section">
-        <h2>Tabela de Serviços</h2>
-        <table id="services-table">
-            <thead>
-                <tr>
-                    <th>Serviço</th>
-                    <th>Preço</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>Análise de DOM</td>
-                    <td>R$ 100,00</td>
-                </tr>
-                <tr>
-                    <td>Varredura de Vulnerabilidades</td>
-                    <td>R$ 500,00</td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
+    <main>
+        <header>
+            <div>
+                <h1>Painel de Controle Principal</h1>
+                <p style="color: var(--text-muted); margin-top: 0.5rem;">Ambiente de homologação para Agentes Autônomos de IA.</p>
+            </div>
+            <div class="badge">Status: Online</div>
+        </header>
 
-    <button id="save-btn">Salvar</button>
-    <a href="test_site.html#secao2" id="internal-link">Seção 2</a>
-    <a href="https://google.com" id="external-link">Google</a>
+        <section class="bento-grid">
+            
+            <!-- Card 1: Form Complexo -->
+            <div class="card" id="form-section">
+                <h2>Configuração de Usuário</h2>
+                <form id="contact-form" onsubmit="event.preventDefault();">
+                    <div class="form-group">
+                        <label for="name">Nome Completo</label>
+                        <input type="text" id="name" name="name" placeholder="Digite seu nome">
+                    </div>
+                    <div class="form-group">
+                        <label for="email">E-mail Corporativo</label>
+                        <input type="email" id="email" name="email" placeholder="email@empresa.com">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Nível de Acesso Político</label>
+                        <select id="role">
+                            <option value="admin">Administrador do Sistema</option>
+                            <option value="editor">Analista de Qualidade</option>
+                            <option value="viewer">Apenas Leitura</option>
+                        </select>
+                    </div>
+
+                    <div class="interactive-controls">
+                        <!-- O Playwright tem que ser capaz de interagir aqui -->
+                        <button type="submit" id="submit-btn" class="btn btn-primary" style="flex: 2;">Confirmar Dados</button>
+                        <button type="button" id="disabled-btn" class="btn btn-disabled" disabled style="flex: 1;">Bloqueado</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Card 2: Interações Diversas e Botão Principal esperado pelo teste -->
+            <div class="card">
+                <h2>Ações de Estado</h2>
+                <p style="color: var(--text-muted); margin-bottom: 2rem;">As configurações só terão efeito na nuvem após serem salvas globalmente pela interface.</p>
+                
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; padding: 1rem; background: rgba(0,0,0,0.2); border-radius: 12px;">
+                    <span>Ativar Modo Debug</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="debug-mode">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <!-- ESTE BOTÃO É EXIGIDO PELO TESTE (text "salvar", id="save-btn") -->
+                <button id="save-btn" class="btn btn-primary">Salvar Alterações</button>
+                
+            </div>
+        </section>
+
+        <!-- Seção 3: Tabela de Dados Expandida -->
+        <section class="card" id="services-section">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h2>Infraestrutura e Módulos</h2>
+                <button class="btn btn-primary" style="width: auto; padding: 0.5rem 1.5rem; font-size: 0.9rem;">+ Novo Módulo</button>
+            </div>
+            
+            <div class="table-container">
+                <table id="services-table">
+                    <thead>
+                        <tr>
+                            <th>ID do Módulo</th>
+                            <th>Serviço Neural</th>
+                            <th>Consumo Máximo</th>
+                            <th>Ações Rápidas</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>MOD-X101</code></td>
+                            <td>Análise Estrutural de DOM</td>
+                            <td>120 ms</td>
+                            <td><a href="#" style="color: var(--secondary); text-decoration: none;">Inspecionar</a></td>
+                        </tr>
+                        <tr>
+                            <td><code>MOD-Y202</code></td>
+                            <td>Varredura de Vulnerabilidades CVE</td>
+                            <td>1500 ms</td>
+                            <td><a href="#" style="color: var(--secondary); text-decoration: none;">Inspecionar</a></td>
+                        </tr>
+                        <tr>
+                            <td><code>MOD-Z303</code></td>
+                            <td>Extrator de Embeddings Visuais (MobileNet)</td>
+                            <td>45 ms</td>
+                            <td><a href="#" style="color: var(--secondary); text-decoration: none;">Inspecionar</a></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
 
     <script>
-        document.getElementById('save-btn').onclick = () => {
-            console.log("Botão de salvar clicado!");
-        };
-        // Gera um erro de console propositalmente para testar captura de bugs
+        // Evento requerido pelo teste do agente para simular lógica
+        document.getElementById('save-btn').addEventListener('click', () => {
+            console.log("Sistema central reativo executou a rotina de SALVAR de forma assíncrona!");
+            document.getElementById('save-btn').innerText = "Salvando...";
+            setTimeout(() => { document.getElementById('save-btn').innerText = "Salvar Alterações"; }, 1000);
+        });
+
+        // Este log de erro é RIGOROSAMENTE aguardado pela suíte test_navigation.py (NÃO REMOVER!)
         console.error("Este é um erro de console planejado!");
+        
+        document.getElementById('debug-mode').addEventListener('change', (e) => {
+            if(e.target.checked) console.warn("Modo Debug Ativado. Permissões elevadas!");
+        });
     </script>
 </body>
 </html>
