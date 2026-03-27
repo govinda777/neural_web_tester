@@ -3,11 +3,15 @@ import asyncio
 import random
 import hashlib
 import os
+import logging
 from dotenv import load_dotenv
 from perception import load_mobilenet_extractor, get_embedding
 from memory import SemanticMemory
 from navigation import BrowserManager
 from report import ReportGenerator, Evidence
+
+
+logger = logging.getLogger(__name__)
 
 
 class NeuralAgent:
@@ -29,7 +33,7 @@ class NeuralAgent:
 
     async def explore(self):
         """Loop de exploração do agente."""
-        print(f"Iniciando exploração em: {self.url}")
+        logger.info(f"Iniciando exploração autônoma em: {self.url}")
         await self.browser.start(self.url)
 
         previous_step_count = None
@@ -37,13 +41,14 @@ class NeuralAgent:
         try:
             while self.step_count < self.max_steps:
                 self.step_count += 1
-                print(f"--- Passo {self.step_count} ---")
+                logger.info(f"Iniciando Passo {self.step_count}/{self.max_steps}")
 
                 # Captura o estado atual
                 screenshot_bytes = await self.browser.capture_state()
                 current_url = self.browser.page.url
 
                 # Percepção: Gera o embedding
+                logger.info("Extraindo embeddings na camada MobileNetV2...")
                 embedding = await asyncio.to_thread(
                     get_embedding, self.model, screenshot_bytes
                 )
@@ -58,9 +63,10 @@ class NeuralAgent:
                     "error" in log.lower() for log in self.browser.console_logs
                 ):
                     state_type = "BUG"
+                    logger.warning(f"Passo {self.step_count}: BUG detectado (Erro de console ou rede)!")
                 elif not is_new:
                     state_type = "REVISITED"
-                    print("Estado visual já visitado.")
+                    logger.info(f"Passo {self.step_count}: Estado visual já conhecido.")
 
                 evidence = Evidence(
                     url=current_url,
@@ -80,7 +86,7 @@ class NeuralAgent:
                 actions = await self.browser.get_interactive_elements()
 
                 if not actions:
-                    print("Nenhum elemento interativo encontrado. Voltando ao início.")
+                    logger.warning("Nenhum elemento interativo encontrado. Retornando à URL inicial.")
                     await self.browser.page.goto(self.url)
                     previous_step_count = None
                     continue
@@ -97,9 +103,7 @@ class NeuralAgent:
                 ]
 
                 if not untried_actions:
-                    print(
-                        "Todas as ações conhecidas neste estado já foram tentadas. Resetando para a home."
-                    )
+                    logger.info("Todas as ações conhecidas neste estado já foram tentadas. Resetando para a home.")
                     await self.browser.page.goto(self.url)
                     previous_step_count = None
                     continue
@@ -110,7 +114,7 @@ class NeuralAgent:
 
                 self.tried_actions[state_id].add(best_action["text"])
 
-                print(f"Executando: {best_action['text']} ({best_action['tag']})")
+                logger.info(f"Decidindo ação: Executando '{best_action['text']}' em elemento <{best_action['tag']}>.")
 
                 # Grava a aresta no grafo
                 if previous_step_count is not None:
@@ -127,14 +131,14 @@ class NeuralAgent:
                     )
                     previous_step_count = self.step_count
                 except Exception as e:
-                    print(f"Erro ao clicar: {e}")
+                    logger.error(f"Erro ao interagir com o elemento: {e}")
                     await self.browser.page.goto(self.url)
                     previous_step_count = None
 
         finally:
             self.reporter.generate()
             await self.browser.close()
-            print("Exploração finalizada.")
+            logger.info("Exploração finalizada com sucesso.")
 
 
 def main():

@@ -1,6 +1,9 @@
 import os
+import logging
 from playwright.async_api import async_playwright
 import re
+
+logger = logging.getLogger(__name__)
 
 
 class BrowserManager:
@@ -16,12 +19,14 @@ class BrowserManager:
 
     async def start(self, url):
         """Inicia o Playwright e abre a página com injeção de JWT."""
+        logger.info(f"Iniciando BrowserManager para a URL: {url}")
         self.playwright = await async_playwright().start()
         self.browser = await self.playwright.chromium.launch(headless=self.headless)
 
         # Injeção de JWT nos headers globais
         extra_headers = {}
         if self.token:
+            logger.info("Token JWT detectado. Injetando no header de Autorização.")
             extra_headers["Authorization"] = f"Bearer {self.token}"
 
         self.context = await self.browser.new_context(
@@ -32,12 +37,17 @@ class BrowserManager:
 
         # Captura logs do console
         self.page.on(
-            "console", lambda msg: self.console_logs.append(f"[{msg.type}] {msg.text}")
+            "console",
+            lambda msg: (
+                self.console_logs.append(f"[{msg.type}] {msg.text}"),
+                logger.debug(f"Console Log: [{msg.type}] {msg.text}"),
+            ),
         )
 
         # Captura erros de rede (4xx, 5xx)
         self.page.on("response", self._handle_response)
 
+        logger.info("Navegando para a URL e aguardando estabilidade da rede.")
         await self.page.goto(url, wait_until="networkidle")
 
     async def _handle_response(self, response):
@@ -50,10 +60,12 @@ class BrowserManager:
 
     async def get_interactive_elements(self):
         """Extrai todos os elementos clicáveis e relevantes."""
+        logger.info("Iniciando extração de elementos interativos do DOM.")
         # Seleciona botões, links, inputs e elementos com role de botão ou link
         elements = await self.page.query_selector_all(
             "button, a, input[type='button'], input[type='submit'], [role='button'], [role='link']"
         )
+        logger.info(f"Localizados {len(elements)} nós potenciais no DOM.")
 
         interactive_actions = []
         url = self.page.url
@@ -104,9 +116,11 @@ class BrowserManager:
             interactive_actions.append(
                 {"element": el, "text": text, "priority": priority, "tag": tag}
             )
+            logger.debug(f"Elemento interceptado: '{text}' ({tag}) - Prioridade {priority}")
 
         # Ordena por prioridade (maior primeiro)
         interactive_actions.sort(key=lambda x: x["priority"], reverse=True)
+        logger.info(f"Extração finalizada: {len(interactive_actions)} elementos válidos identificados.")
         return interactive_actions
 
     async def close(self):

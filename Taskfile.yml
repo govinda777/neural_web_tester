@@ -11,21 +11,14 @@ tasks:
       - '{{.PYTHON}} -m playwright install chromium'
 
   test:
-    desc: "Executa a suíte de testes. Parâmetro (REPORT=true) para abrir o relatório após a execução."
+    desc: "Executa a suíte de testes BDD com Allure Report. Parâmetro (REPORT=true) para abrir o relatório após a execução."
     env:
       PYTHONPATH: .
     vars:
       REPORT: '{{default "false" .REPORT}}'
     cmds:
-      - '{{.PYTHON}} -m pytest tests/ --html=reports/test_report.html --self-contained-html'
-      - cmd: '{{if eq .REPORT "true"}}powershell -Command "Start-Process reports/test_report.html"{{end}}'
-        platforms: [windows]
-        ignore_error: true
-      - cmd: '{{if eq .REPORT "true"}}open reports/test_report.html{{end}}'
-        platforms: [darwin]
-        ignore_error: true
-      - cmd: '{{if eq .REPORT "true"}}xdg-open reports/test_report.html{{end}}'
-        platforms: [linux]
+      - '{{.PYTHON}} -m pytest tests/step_defs/ --alluredir=reports/allure-results'
+      - cmd: '{{if eq .REPORT "true"}}allure serve reports/allure-results{{end}}'
         ignore_error: true
 
   lint:
