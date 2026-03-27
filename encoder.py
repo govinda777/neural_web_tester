@@ -1,6 +1,5 @@
 import numpy as np
 import tensorflow as tf
-from perception import preprocess_image
 
 class DOMEncoder:
     def __init__(self, max_elements=50):
@@ -19,7 +18,7 @@ class DOMEncoder:
         flags = np.zeros((self.max_elements, 2), dtype=np.float32)
         adj_matrix = np.zeros((self.max_elements, self.max_elements), dtype=np.float32)
 
-        # Usamos um mapeamento simples para adjacência: se compartilham o mesmo pai, estão conectados
+        # Usamos o ID do pai ou uma combinação única de tag+posicao para adjacência real
         parents = {}
 
         for i in range(num_els):
@@ -31,7 +30,10 @@ class DOMEncoder:
             flags[i, 0] = 1.0 if el.get('isShadow') else 0.0
             flags[i, 1] = 1.0 if el.get('isIFrame') else 0.0
 
-            parent_key = (el['hierarchy']['parentTag'], el['isIFrame'])
+            # Chave única para o pai no DOM
+            parent_id = el['hierarchy'].get('parentId', el['hierarchy']['parentTag'])
+            parent_key = (parent_id, el['isIFrame'])
+
             if parent_key not in parents:
                 parents[parent_key] = []
             parents[parent_key].append(i)
@@ -53,8 +55,7 @@ class DOMEncoder:
         # Flatten para simplificar a MLP inicial
         dom_vector = np.concatenate([coords.flatten(), flags.flatten(), adj.flatten()])
 
-        # Hash do estado anterior como flag binária (simplificado: hash convertido em float normalizado)
-        # Em um sistema real, poderíamos usar o hash para buscar na memória
+        # Hash do estado anterior como flag binária
         hash_val = int(prev_state_hash, 16) % 1000 / 1000.0 if prev_state_hash else 0.0
 
         # Combina com o embedding do Gherkin

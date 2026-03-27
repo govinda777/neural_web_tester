@@ -30,7 +30,7 @@ class NeuralAgent:
         print(f"Iniciando exploração RL em: {self.url}")
         print(f"Objetivo Gherkin: {self.goal}")
 
-        obs, _ = await self.env._async_reset()
+        obs, _ = await self.env.async_reset()
         self.state_sequence.append(obs)
 
         previous_step_count = None
@@ -41,19 +41,20 @@ class NeuralAgent:
                 print(f"--- Passo {self.step_count} ---")
 
                 # Predição do modelo (Policy)
-                # Converte sequência para tensor [1, seq_len, dim]
                 seq_tensor = np.array(self.state_sequence)
-                action_probs = self.model.predict_action(seq_tensor)
-                action = np.argmax(action_probs)
+                action_probs, element_probs = self.model.predict_action(seq_tensor)
+
+                action_cat = np.argmax(action_probs)
+                element_idx = np.argmax(element_probs)
 
                 action_names = ["Click", "Type", "Scroll", "Back", "Finish"]
-                print(f"Ação escolhida pela Rede Neural: {action_names[action]}")
+                print(f"Ação: {action_names[action_cat]} | Elemento: {element_idx}")
 
                 # Executa ação no ambiente
-                obs, reward, done, truncated, _ = await self.env._async_step(action)
+                obs, reward, done, truncated, _ = await self.env.async_step([action_cat, element_idx])
                 self.state_sequence.append(obs)
 
-                # Coleta evidências para o relatório
+                # Coleta evidências
                 screenshot_bytes = await self.env.browser.capture_state()
                 current_url = self.env.browser.page.url
 
@@ -73,21 +74,20 @@ class NeuralAgent:
                 )
                 self.reporter.add_evidence(evidence)
 
-                # Grava a aresta no grafo do relatório
                 if previous_step_count is not None:
                     self.reporter.add_edge(
-                        previous_step_count, self.step_count, action_names[action]
+                        previous_step_count, self.step_count, f"{action_names[action_cat]} (idx: {element_idx})"
                     )
 
                 previous_step_count = self.step_count
 
                 if done or truncated:
-                    print("Exploração concluída (Objetivo atingido ou limite de passos).")
+                    print("Exploração concluída.")
                     break
 
         finally:
             self.reporter.generate()
-            await self.env.browser.close()
+            await self.env.async_close()
             print("Exploração finalizada.")
 
 
