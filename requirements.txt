@@ -1,0 +1,7 @@
+tensorflow
+playwright
+jinja2
+numpy
+Pillow
+pytest
+pytest-asyncio

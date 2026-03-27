@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Mock Site para Testes</title>
+</head>
+<body>
+    <h1>Página Principal</h1>
+    <p>Bem-vindo ao site de teste do Agente Autônomo.</p>
+
+    <button id="save-btn">Salvar</button>
+    <a href="test_site.html#secao2" id="internal-link">Seção 2</a>
+    <a href="https://google.com" id="external-link">Google</a>
+
+    <script>
+        document.getElementById('save-btn').onclick = () => {
+            console.log("Botão de salvar clicado!");
+        };
+        // Gera um erro de console propositalmente para testar captura de bugs
+        console.error("Este é um erro de console planejado!");
+    </script>
+</body>
+</html>
