@@ -1,36 +1,37 @@
 import argparse
 import asyncio
-import random
-import hashlib
+import numpy as np
 import os
 from dotenv import load_dotenv
-from perception import load_mobilenet_extractor, get_embedding
-from memory import SemanticMemory
-from navigation import BrowserManager
+from environment import WebAgentEnv
+from model import NeuralWebModel
 from report import ReportGenerator, Evidence
 
 
 class NeuralAgent:
-    def __init__(self, url, token=None, max_steps=10):
+    def __init__(self, url, gherkin_goal, token=None, max_steps=10):
         self.url = url
+        self.goal = gherkin_goal
         self.token = token
         self.max_steps = max_steps
-        self.memory = SemanticMemory(threshold=0.98)
-        self.model = load_mobilenet_extractor()
-        self.browser = BrowserManager(token=token)
+
+        # RL Environment
+        self.env = WebAgentEnv(url, gherkin_goal, max_steps=max_steps)
+
+        # Neural Model
+        self.model = NeuralWebModel(state_dim=self.env.state_dim)
+
         self.reporter = ReportGenerator()
         self.step_count = 0
-        self.state_history = []  # Lista de IDs de estados visitados
-        self.tried_actions = {}  # state_id -> set of action_identifiers
-
-    def _get_state_id(self, embedding):
-        """Gera um ID único (curto) para o estado baseado no embedding."""
-        return hashlib.md5(embedding.tobytes()).hexdigest()[:8]
+        self.state_sequence = []
 
     async def explore(self):
-        """Loop de exploração do agente."""
-        print(f"Iniciando exploração em: {self.url}")
-        await self.browser.start(self.url)
+        """Loop de exploração do agente usando RL."""
+        print(f"Iniciando exploração RL em: {self.url}")
+        print(f"Objetivo Gherkin: {self.goal}")
+
+        obs, _ = await self.env._async_reset()
+        self.state_sequence.append(obs)
 
         previous_step_count = None
 
@@ -39,110 +40,68 @@ class NeuralAgent:
                 self.step_count += 1
                 print(f"--- Passo {self.step_count} ---")
 
-                # Captura o estado atual
-                screenshot_bytes = await self.browser.capture_state()
-                current_url = self.browser.page.url
+                # Predição do modelo (Policy)
+                # Converte sequência para tensor [1, seq_len, dim]
+                seq_tensor = np.array(self.state_sequence)
+                action_probs = self.model.predict_action(seq_tensor)
+                action = np.argmax(action_probs)
 
-                # Percepção: Gera o embedding
-                embedding = await asyncio.to_thread(
-                    get_embedding, self.model, screenshot_bytes
-                )
+                action_names = ["Click", "Type", "Scroll", "Back", "Finish"]
+                print(f"Ação escolhida pela Rede Neural: {action_names[action]}")
 
-                # Memória Semântica: Verifica se é um estado novo
-                # Aqui usamos a nossa memória semântica para ver se o estado visual é conhecido
-                is_new = self.memory.is_new_state(embedding)
+                # Executa ação no ambiente
+                obs, reward, done, truncated, _ = await self.env._async_step(action)
+                self.state_sequence.append(obs)
 
-                # Coleta evidências
+                # Coleta evidências para o relatório
+                screenshot_bytes = await self.env.browser.capture_state()
+                current_url = self.env.browser.page.url
+
                 state_type = "SUCCESS"
-                if self.browser.network_errors or any(
-                    "error" in log.lower() for log in self.browser.console_logs
-                ):
+                if reward < -2:
                     state_type = "BUG"
-                elif not is_new:
+                elif reward < 0 and reward > -2:
                     state_type = "REVISITED"
-                    print("Estado visual já visitado.")
 
                 evidence = Evidence(
                     url=current_url,
                     screenshot_bytes=screenshot_bytes,
-                    console_logs=list(self.browser.console_logs),
-                    network_errors=list(self.browser.network_errors),
+                    console_logs=list(self.env.browser.console_logs),
+                    network_errors=list(self.env.browser.network_errors),
                     state_type=state_type,
                     step=self.step_count,
                 )
                 self.reporter.add_evidence(evidence)
 
-                # Limpa logs para o próximo passo
-                self.browser.console_logs.clear()
-                self.browser.network_errors.clear()
-
-                # Navegação: Extrai e prioriza ações
-                actions = await self.browser.get_interactive_elements()
-
-                if not actions:
-                    print("Nenhum elemento interativo encontrado. Voltando ao início.")
-                    await self.browser.page.goto(self.url)
-                    previous_step_count = None
-                    continue
-
-                # Tenta encontrar uma ação que ainda não foi tentada neste estado (aproximadamente)
-                # Como o estado é visual, usamos o embedding para identificar o estado
-                state_id = self._get_state_id(embedding)
-                if state_id not in self.tried_actions:
-                    self.tried_actions[state_id] = set()
-
-                # Filtra ações já tentadas
-                untried_actions = [
-                    a for a in actions if a["text"] not in self.tried_actions[state_id]
-                ]
-
-                if not untried_actions:
-                    print(
-                        "Todas as ações conhecidas neste estado já foram tentadas. Resetando para a home."
-                    )
-                    await self.browser.page.goto(self.url)
-                    previous_step_count = None
-                    continue
-
-                # Escolha entre as melhores ações não tentadas
-                top_untried = untried_actions[:3]
-                best_action = random.choice(top_untried)
-
-                self.tried_actions[state_id].add(best_action["text"])
-
-                print(f"Executando: {best_action['text']} ({best_action['tag']})")
-
-                # Grava a aresta no grafo
+                # Grava a aresta no grafo do relatório
                 if previous_step_count is not None:
                     self.reporter.add_edge(
-                        previous_step_count, self.step_count, best_action["text"]
+                        previous_step_count, self.step_count, action_names[action]
                     )
 
-                try:
-                    # Tenta clicar no elemento
-                    await best_action["element"].click()
-                    # Espera um pouco para a rede estabilizar
-                    await self.browser.page.wait_for_load_state(
-                        "networkidle", timeout=5000
-                    )
-                    previous_step_count = self.step_count
-                except Exception as e:
-                    print(f"Erro ao clicar: {e}")
-                    await self.browser.page.goto(self.url)
-                    previous_step_count = None
+                previous_step_count = self.step_count
+
+                if done or truncated:
+                    print("Exploração concluída (Objetivo atingido ou limite de passos).")
+                    break
 
         finally:
             self.reporter.generate()
-            await self.browser.close()
+            await self.env.browser.close()
             print("Exploração finalizada.")
 
 
 def main():
     load_dotenv()
     parser = argparse.ArgumentParser(
-        description="Neural Web Tester - CLI do Agente Neural"
+        description="Neural Web Tester - CLI do Agente Neural (RL Engine)"
     )
     parser.add_argument("--url", required=True, help="URL inicial para exploração")
+    parser.add_argument(
+        "--goal",
+        default="When I explore the website, Then I should find relevant information",
+        help="Objetivo BDD (Gherkin)"
+    )
     parser.add_argument(
         "--token",
         default=os.getenv("AGENT_TOKEN"),
@@ -154,7 +113,12 @@ def main():
 
     args = parser.parse_args()
 
-    agent = NeuralAgent(url=args.url, token=args.token, max_steps=args.steps)
+    agent = NeuralAgent(
+        url=args.url,
+        gherkin_goal=args.goal,
+        token=args.token,
+        max_steps=args.steps
+    )
     asyncio.run(agent.explore())
 
 

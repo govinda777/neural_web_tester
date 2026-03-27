@@ -49,63 +49,97 @@ class BrowserManager:
         return await self.page.screenshot(type="png")
 
     async def get_interactive_elements(self):
-        """Extrai todos os elementos clicáveis e relevantes."""
-        # Seleciona botões, links, inputs e elementos com role de botão ou link
-        elements = await self.page.query_selector_all(
-            "button, a, input[type='button'], input[type='submit'], [role='button'], [role='link']"
-        )
-
+        """Extrai todos os elementos clicáveis e relevantes, incluindo Shadow DOM e iFrames."""
+        selector = "button, a, input, select, textarea, [role='button'], [role='link']"
         interactive_actions = []
+
         url = self.page.url
         if url.startswith("file://"):
-            current_domain = (
-                "localhost"  # Trata arquivos locais como localhost para teste
-            )
+            current_domain = "localhost"
         else:
             domain_match = re.search(r"https?://([^/]+)", url)
             current_domain = domain_match.group(1) if domain_match else ""
 
-        for el in elements:
-            # Filtra elementos invisíveis ou desabilitados
-            if not await el.is_visible() or not await el.is_enabled():
+        for frame in self.page.frames:
+            try:
+                elements = await frame.locator(selector).all()
+            except Exception:
                 continue
 
-            # Para links, verifica se leva ao mesmo domínio
-            href = await el.get_attribute("href")
-            if href:
-                if (
-                    href.startswith("http")
-                    and current_domain
-                    and current_domain not in href
-                ):
-                    continue  # Ignora links externos
-                if href.startswith("#") or href.startswith("javascript:"):
-                    continue  # Ignora âncoras internas e scripts diretos
+            is_main_frame = frame == self.page.main_frame
 
-            # Priorização básica baseada em texto
-            text = (await el.inner_text()).lower()
-            tag = await el.evaluate("el => el.tagName.toLowerCase()")
+            for el in elements:
+                try:
+                    if not await el.is_visible() or not await el.is_enabled():
+                        continue
 
-            priority = 1
-            high_priority_keywords = [
-                "save",
-                "submit",
-                "menu",
-                "enviar",
-                "salvar",
-                "entrar",
-                "login",
-            ]
-            if any(kw in text for kw in high_priority_keywords):
-                priority = 3
-            elif tag == "button" or tag == "a":
-                priority = 2
+                    # Filtro de links externos
+                    tag = await el.evaluate("el => el.tagName.toLowerCase()")
+                    if tag == "a":
+                        href = await el.get_attribute("href")
+                        if href:
+                            if (
+                                href.startswith("http")
+                                and current_domain
+                                and current_domain not in href
+                            ):
+                                continue
+                            if href.startswith("#") or href.startswith("javascript:"):
+                                continue
 
-            interactive_actions.append(
-                {"element": el, "text": text, "priority": priority, "tag": tag}
-            )
+                    box = await el.bounding_box()
+                    if not box or box["width"] == 0 or box["height"] == 0:
+                        continue
 
-        # Ordena por prioridade (maior primeiro)
+                    # Extração de dados adicionais via JS para performance
+                    info = await el.evaluate("""el => {
+                        const rect = el.getBoundingClientRect();
+                        const isShadow = !!el.getRootNode().host;
+                        const parent = el.parentElement;
+                        return {
+                            text: (el.innerText || el.value || el.placeholder || "").trim().toLowerCase(),
+                            isShadow: isShadow,
+                            parentTag: parent ? parent.tagName.toLowerCase() : null,
+                            siblingIndex: parent ? Array.from(parent.children).indexOf(el) : 0,
+                            id: el.id || ""
+                        }
+                    }""")
+
+                    priority = 1
+                    high_priority_keywords = [
+                        "save",
+                        "submit",
+                        "menu",
+                        "enviar",
+                        "salvar",
+                        "entrar",
+                        "login",
+                    ]
+                    if any(kw in info["text"] for kw in high_priority_keywords):
+                        priority = 3
+                    elif tag in ["button", "a"]:
+                        priority = 2
+
+                    interactive_actions.append(
+                        {
+                            "element": el,
+                            "text": info["text"],
+                            "priority": priority,
+                            "tag": tag,
+                            "x": box["x"] + box["width"] / 2,
+                            "y": box["y"] + box["height"] / 2,
+                            "isShadow": info["isShadow"],
+                            "isIFrame": not is_main_frame,
+                            "id": info["id"],
+                            "hierarchy": {
+                                "parentTag": info["parentTag"],
+                                "siblingIndex": info["siblingIndex"],
+                            },
+                        }
+                    )
+                except Exception:
+                    continue
+
         interactive_actions.sort(key=lambda x: x["priority"], reverse=True)
         return interactive_actions
 

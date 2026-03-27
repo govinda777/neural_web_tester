@@ -1,4 +1,7 @@
+setuptools<70
 tensorflow
+tensorflow-hub
+gymnasium
 playwright
 jinja2
 numpy
