@@ -2,6 +2,7 @@ import tensorflow as tf
 import numpy as np
 from PIL import Image
 import io
+import allure
 
 
 def load_mobilenet_extractor():
@@ -25,6 +26,7 @@ def preprocess_image(screenshot_bytes):
     return img_array
 
 
+@allure.step("Extraindo embeddings visuais com MobileNetV2")
 def get_embedding(model, screenshot_bytes):
     """Gera um Vetor de Características (Embedding) da imagem."""
     processed_img = preprocess_image(screenshot_bytes)

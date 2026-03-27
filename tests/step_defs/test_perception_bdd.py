@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+import allure
 from pytest_bdd import scenario, given, when, then
 from perception import load_mobilenet_extractor, preprocess_image, get_embedding
 from PIL import Image
@@ -24,6 +25,7 @@ def step_process_image(perception_context):
     img_byte_arr = io.BytesIO()
     img.save(img_byte_arr, format="PNG")
     screenshot_bytes = img_byte_arr.getvalue()
+    allure.attach(screenshot_bytes, name="Imagem de Teste (Mock)", attachment_type=allure.attachment_type.PNG)
 
     processed = preprocess_image(screenshot_bytes)
     embedding = get_embedding(perception_context["model"], screenshot_bytes)

@@ -1,5 +1,6 @@
 import numpy as np
 import logging
+import allure
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,7 @@ class SemanticMemory:
         self.embeddings = []
         self.threshold = threshold
 
+    @allure.step("Verificando se o estado visual é novo (Memória Semântica)")
     def is_new_state(self, new_embedding):
         """Verifica se o novo estado é diferente dos estados já visitados."""
         logger.info("Analisando novo estado visual na Memória Semântica.")

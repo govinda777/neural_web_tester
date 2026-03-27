@@ -1,6 +1,7 @@
 import asyncio
 import os
 import pytest
+import allure
 from pytest_bdd import scenario, given, when, then, parsers
 from navigation import BrowserManager
 

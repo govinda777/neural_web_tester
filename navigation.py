@@ -1,5 +1,6 @@
 import os
 import logging
+import allure
 from playwright.async_api import async_playwright
 import re
 
@@ -17,6 +18,7 @@ class BrowserManager:
         self.console_logs = []
         self.network_errors = []
 
+    @allure.step("Iniciando BrowserManager para a URL: {url}")
     async def start(self, url):
         """Inicia o Playwright e abre a página com injeção de JWT."""
         logger.info(f"Iniciando BrowserManager para a URL: {url}")
@@ -54,10 +56,14 @@ class BrowserManager:
         if response.status >= 400:
             self.network_errors.append(f"Error {response.status} at {response.url}")
 
+    @allure.step("Capturando estado visual (screenshot)")
     async def capture_state(self):
         """Tira screenshot e retorna os bytes."""
-        return await self.page.screenshot(type="png")
+        screenshot = await self.page.screenshot(type="png")
+        allure.attach(screenshot, name="Estado Visual Atual", attachment_type=allure.attachment_type.PNG)
+        return screenshot
 
+    @allure.step("Extraindo elementos interativos do DOM")
     async def get_interactive_elements(self):
         """Extrai todos os elementos clicáveis e relevantes."""
         logger.info("Iniciando extração de elementos interativos do DOM.")
