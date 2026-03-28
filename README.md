@@ -1,10 +1,22 @@
 # Neural Web Tester 🤖🌐
 
-O **Neural Web Tester** é uma ferramenta CLI de exploração autônoma de aplicações web. Ele utiliza Redes Neurais Convolucionais (MobileNetV2) para reconhecimento visual de estados e uma memória semântica para evitar a exploração redundante de caminhos já visitados.
+O **Neural Web Tester** é um projeto educacional focado em ensinar desenvolvedores a implementarem redes neurais simples na prática. Ele utiliza o pretexto de uma ferramenta CLI de exploração autônoma de aplicações web para demonstrar conceitos de Visão Computacional e Memória Semântica.
 
-O objetivo é automatizar o teste de "sanidade" (smoke testing) e a descoberta de bugs visuais ou de rede, gerando relatórios ricos com evidências de cada passo.
+> **Objetivo:** Desmistificar o uso de IA (MobileNetV2) e Geometria Vetorial em aplicações reais de engenharia de software.
 
-## 🚀 Guia de Início Rápido
+---
+
+## 🎓 Aprenda com este projeto
+
+Este repositório foi desenhado para ser um guia de estudo. Comece por aqui:
+
+- [🧠 **Introdução à IA Prática:** Como o Agente "Pensa"?](docs/education/introducao_ia_pratica.md)
+- [🏗️ **Arquitetura do Código:** Da Teoria à Prática](docs/technical/arquitetura_do_codigo.md)
+- [🚀 **Tutorial:** Seu Primeiro Teste com IA](docs/tutorial_seu_primeiro_teste_ia.md)
+
+---
+
+## 🚀 Guia de Início Rápido (Hands-on)
 
 ### Requisitos
 - **Python:** 3.8 ou superior
