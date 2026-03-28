@@ -1,6 +1,6 @@
 # Perception Scan Report
-**Timestamp:** 2026-03-27 17:03:17
-**Commit SHA:** 670bfc27d2e9373520d4a80b27f6527936dfcbd4
+**Timestamp:** 2026-03-28 02:41:36
+**Commit SHA:** c6765e1c4758b1df0b16c0e4487273c382f0b41e
 
 ## Tabela de Elementos Encontrados
 
@@ -18,6 +18,7 @@
 | disabled-btn | False |
 | save-btn | True |
 | None | True |
+| deep-button | True |
 
 ### Services Table
 | Service | Price |
