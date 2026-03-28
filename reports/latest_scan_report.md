@@ -1,6 +1,6 @@
 # Perception Scan Report
-**Timestamp:** 2026-03-27 02:14:30
-**Commit SHA:** 99f7e50d1ff1e252646783736630b130001a71c4
+**Timestamp:** 2026-03-28 02:41:36
+**Commit SHA:** c6765e1c4758b1df0b16c0e4487273c382f0b41e
 
 ## Tabela de Elementos Encontrados
 
@@ -9,6 +9,7 @@
 |----|------|------|
 | name | name | text |
 | email | email | email |
+| debug-mode | None | checkbox |
 
 ### Buttons
 | ID | Enabled |
@@ -16,12 +17,15 @@
 | submit-btn | True |
 | disabled-btn | False |
 | save-btn | True |
+| None | True |
+| deep-button | True |
 
 ### Services Table
 | Service | Price |
 |---------|-------|
-| Análise de DOM | R$ 100,00 |
-| Varredura de Vulnerabilidades | R$ 500,00 |
+| MOD-X101 | Análise Estrutural de DOM |
+| MOD-Y202 | Varredura de Vulnerabilidades CVE |
+| MOD-Z303 | Extrator de Embeddings Visuais (MobileNet) |
 
 ## Status de Sucesso
 O agente identificou 100% dos elementos esperados.

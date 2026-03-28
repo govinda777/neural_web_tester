@@ -1,162 +1,114 @@
 import argparse
 import asyncio
-import random
-import hashlib
 import os
+import numpy as np
+import tensorflow as tf
 from dotenv import load_dotenv
-from perception import load_mobilenet_extractor, get_embedding
-from memory import SemanticMemory
-from navigation import BrowserManager
+from model import load_reasoning_engine, get_use_model
+from web_agent_env import WebAgentEnv
 from report import ReportGenerator, Evidence
 
-
 class NeuralAgent:
-    def __init__(self, url, token=None, max_steps=10):
+    def __init__(self, url, bdd_step="Navegar no site", token=None, max_steps=10):
         self.url = url
+        self.bdd_step = bdd_step
         self.token = token
         self.max_steps = max_steps
-        self.memory = SemanticMemory(threshold=0.98)
-        self.model = load_mobilenet_extractor()
-        self.browser = BrowserManager(token=token)
+
+        # Inicializa Ambiente Gymnasium
+        self.env = WebAgentEnv(url, bdd_step, token=token, max_steps=max_steps)
+
+        # Inicializa Modelos de IA
+        self.state_dim = self.env.observation_space.shape[0]
+        self.action_dim = self.env.action_space.nvec[1] # Numero de elementos alvo (50)
+        self.model = load_reasoning_engine(self.state_dim, self.action_dim)
+        self.use_model = get_use_model()
+
         self.reporter = ReportGenerator()
-        self.step_count = 0
-        self.state_history = []  # Lista de IDs de estados visitados
-        self.tried_actions = {}  # state_id -> set of action_identifiers
 
-    def _get_state_id(self, embedding):
-        """Gera um ID único (curto) para o estado baseado no embedding."""
-        return hashlib.md5(embedding.tobytes()).hexdigest()[:8]
+    async def run(self, train=False):
+        """Loop principal do agente usando a política da rede neural."""
+        print(f"Iniciando Agente RL em: {self.url}")
+        print(f"Objetivo Gherkin: {self.bdd_step}")
 
-    async def explore(self):
-        """Loop de exploração do agente."""
-        print(f"Iniciando exploração em: {self.url}")
-        await self.browser.start(self.url)
+        # 1. Gera embedding do objetivo (When Gherkin)
+        bdd_embedding = self.use_model([self.bdd_step]).numpy()
 
-        previous_step_count = None
+        # 2. Reset do Ambiente
+        obs, info = await self.env.async_reset()
+
+        terminated = False
+        truncated = False
+        step = 0
+
+        optimizer = tf.keras.optimizers.Adam(learning_rate=0.01)
 
         try:
-            while self.step_count < self.max_steps:
-                self.step_count += 1
-                print(f"--- Passo {self.step_count} ---")
+            while not (terminated or truncated):
+                step += 1
+                print(f"--- Passo {step} ---")
 
-                # Captura o estado atual
-                screenshot_bytes = await self.browser.capture_state()
-                current_url = self.browser.page.url
+                # Prepara entrada para a rede
+                obs_tensor = tf.convert_to_tensor(obs[np.newaxis, ...], dtype=tf.float32)
+                bdd_tensor = tf.convert_to_tensor(bdd_embedding, dtype=tf.float32)
 
-                # Percepção: Gera o embedding
-                embedding = await asyncio.to_thread(
-                    get_embedding, self.model, screenshot_bytes
-                )
+                # 3. Inferência: Escolha da Ação
+                cat_probs, target_probs = self.model({'state': obs_tensor, 'bdd_embedding': bdd_tensor})
 
-                # Memória Semântica: Verifica se é um estado novo
-                # Aqui usamos a nossa memória semântica para ver se o estado visual é conhecido
-                is_new = self.memory.is_new_state(embedding)
+                # Epsilon-greedy para exploração básica durante o teste
+                if np.random.rand() < 0.2:
+                    category = np.random.randint(5)
+                    target_idx = np.random.randint(self.action_dim)
+                else:
+                    category = np.argmax(cat_probs.numpy()[0])
+                    target_idx = np.argmax(target_probs.numpy()[0])
 
-                # Coleta evidências
-                state_type = "SUCCESS"
-                if self.browser.network_errors or any(
-                    "error" in log.lower() for log in self.browser.console_logs
-                ):
-                    state_type = "BUG"
-                elif not is_new:
-                    state_type = "REVISITED"
-                    print("Estado visual já visitado.")
+                action = [category, target_idx]
 
+                print(f"Ação Escolhida: Cat={category}, ElementID={target_idx}")
+
+                # 4. Execução no Ambiente
+                obs, reward, terminated, truncated, info = await self.env.async_step(action)
+
+                # 4.1 Update básico (online learning simulado)
+                if train:
+                    with tf.GradientTape() as tape:
+                        p_cat, p_target = self.model({'state': obs_tensor, 'bdd_embedding': bdd_tensor})
+                        loss = -tf.math.log(p_cat[0, category]) - tf.math.log(p_target[0, target_idx])
+
+                    grads = tape.gradient(loss * reward, self.model.trainable_variables)
+                    optimizer.apply_gradients(zip(grads, self.model.trainable_variables))
+
+                # 5. Coleta de Evidências (Dashboard do Agente)
+                screenshot = await self.env.browser.capture_state()
                 evidence = Evidence(
-                    url=current_url,
-                    screenshot_bytes=screenshot_bytes,
-                    console_logs=list(self.browser.console_logs),
-                    network_errors=list(self.browser.network_errors),
-                    state_type=state_type,
-                    step=self.step_count,
+                    url=self.env.browser.page.url,
+                    screenshot_bytes=screenshot,
+                    console_logs=list(self.env.browser.console_logs),
+                    network_errors=list(self.env.browser.network_errors),
+                    state_type="SUCCESS" if reward > 0 else "LOOP" if reward < -1 else "REVISITED",
+                    step=step,
                 )
                 self.reporter.add_evidence(evidence)
 
-                # Limpa logs para o próximo passo
-                self.browser.console_logs.clear()
-                self.browser.network_errors.clear()
-
-                # Navegação: Extrai e prioriza ações
-                actions = await self.browser.get_interactive_elements()
-
-                if not actions:
-                    print("Nenhum elemento interativo encontrado. Voltando ao início.")
-                    await self.browser.page.goto(self.url)
-                    previous_step_count = None
-                    continue
-
-                # Tenta encontrar uma ação que ainda não foi tentada neste estado (aproximadamente)
-                # Como o estado é visual, usamos o embedding para identificar o estado
-                state_id = self._get_state_id(embedding)
-                if state_id not in self.tried_actions:
-                    self.tried_actions[state_id] = set()
-
-                # Filtra ações já tentadas
-                untried_actions = [
-                    a for a in actions if a["text"] not in self.tried_actions[state_id]
-                ]
-
-                if not untried_actions:
-                    print(
-                        "Todas as ações conhecidas neste estado já foram tentadas. Resetando para a home."
-                    )
-                    await self.browser.page.goto(self.url)
-                    previous_step_count = None
-                    continue
-
-                # Escolha entre as melhores ações não tentadas
-                top_untried = untried_actions[:3]
-                best_action = random.choice(top_untried)
-
-                self.tried_actions[state_id].add(best_action["text"])
-
-                print(f"Executando: {best_action['text']} ({best_action['tag']})")
-
-                # Grava a aresta no grafo
-                if previous_step_count is not None:
-                    self.reporter.add_edge(
-                        previous_step_count, self.step_count, best_action["text"]
-                    )
-
-                try:
-                    # Tenta clicar no elemento
-                    await best_action["element"].click()
-                    # Espera um pouco para a rede estabilizar
-                    await self.browser.page.wait_for_load_state(
-                        "networkidle", timeout=5000
-                    )
-                    previous_step_count = self.step_count
-                except Exception as e:
-                    print(f"Erro ao clicar: {e}")
-                    await self.browser.page.goto(self.url)
-                    previous_step_count = None
+                print(f"Recompensa: {reward}")
 
         finally:
             self.reporter.generate()
-            await self.browser.close()
-            print("Exploração finalizada.")
+            await self.env.close()
+            print("Execução finalizada.")
 
-
-def main():
+async def main():
     load_dotenv()
-    parser = argparse.ArgumentParser(
-        description="Neural Web Tester - CLI do Agente Neural"
-    )
-    parser.add_argument("--url", required=True, help="URL inicial para exploração")
-    parser.add_argument(
-        "--token",
-        default=os.getenv("AGENT_TOKEN"),
-        help="Bearer JWT Token para injeção",
-    )
-    parser.add_argument(
-        "--steps", type=int, default=10, help="Número máximo de passos de exploração"
-    )
+    parser = argparse.ArgumentParser(description="Neural Web Tester CLI")
+    parser.add_argument("--url", required=True, help="URL inicial")
+    parser.add_argument("--bdd", default="Ao clicar em Salvar", help="Texto do passo 'When' Gherkin")
+    parser.add_argument("--steps", type=int, default=10, help="Passos máximos")
 
     args = parser.parse_args()
 
-    agent = NeuralAgent(url=args.url, token=args.token, max_steps=args.steps)
-    asyncio.run(agent.explore())
-
+    agent = NeuralAgent(url=args.url, bdd_step=args.bdd, max_steps=args.steps)
+    await agent.run()
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
