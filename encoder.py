@@ -1,6 +1,7 @@
 import numpy as np
 import hashlib
 
+
 class DOMEncoder:
     def __init__(self, max_elements=50):
         self.max_elements = max_elements
@@ -26,16 +27,18 @@ class DOMEncoder:
         for i in range(num_elements):
             el = elements_metadata[i]
             features[i] = [
-                el.get('x', 0),
-                el.get('y', 0),
-                float(el.get('is_shadow', False)),
-                float(el.get('is_iframe', False))
+                el.get("x", 0),
+                el.get("y", 0),
+                float(el.get("is_shadow", False)),
+                float(el.get("is_iframe", False)),
             ]
 
-            parent_idx = el.get('parent_index')
+            parent_idx = el.get("parent_index")
             if parent_idx is not None and parent_idx < self.max_elements:
                 adj_matrix[parent_idx, i] = 1.0
-                adj_matrix[i, parent_idx] = 1.0 # Grafo não direcionado para facilitar propagação
+                adj_matrix[i, parent_idx] = (
+                    1.0  # Grafo não direcionado para facilitar propagação
+                )
 
         # 3. Hash do estado anterior (Memory Component)
         # Transformamos o hash (hex) em um vetor numérico simples
@@ -43,14 +46,14 @@ class DOMEncoder:
         if previous_state_hash:
             # Converte partes do SHA-256 (32 bytes) em floats
             hash_bytes = bytes.fromhex(previous_state_hash)
-            memory_vector = np.frombuffer(hash_bytes, dtype=np.uint8).astype(np.float32) / 255.0
+            memory_vector = (
+                np.frombuffer(hash_bytes, dtype=np.uint8).astype(np.float32) / 255.0
+            )
 
         # Flatten e concatenação para formar o vetor de estado 's'
-        state_tensor = np.concatenate([
-            adj_matrix.flatten(),
-            features.flatten(),
-            memory_vector
-        ])
+        state_tensor = np.concatenate(
+            [adj_matrix.flatten(), features.flatten(), memory_vector]
+        )
 
         return state_tensor
 

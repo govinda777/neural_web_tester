@@ -1,12 +1,13 @@
 import unittest
 import numpy as np
 from perception import load_mobilenet_extractor, preprocess_image, get_embedding
-from perception import load_mobilenet_extractor, preprocess_image, get_embedding
 from PIL import Image
 import io
 import logging
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 
@@ -27,7 +28,9 @@ class TestPerception(unittest.TestCase):
         self.assertEqual(processed.shape, (1, 224, 224, 3))
         self.assertTrue(np.max(processed) <= 1.0)
         self.assertTrue(np.min(processed) >= -1.0)
-        logger.info(f"Pré-processamento retornou os dados no formato esperado {processed.shape}.")
+        logger.info(
+            f"Pré-processamento retornou os dados no formato esperado {processed.shape}."
+        )
 
     def test_get_embedding(self):
         logger.info("Testando extração do Embedding com a MobileNetV2...")

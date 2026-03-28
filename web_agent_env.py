@@ -1,9 +1,9 @@
 import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
-import asyncio
 from navigation import BrowserManager
 from encoder import DOMEncoder
+
 
 class WebAgentEnv(gym.Env):
     def __init__(self, url, bdd_step_text, token=None, max_steps=15):
@@ -19,7 +19,9 @@ class WebAgentEnv(gym.Env):
 
         # Observation Space: Tensor do Encoder (Adjacency + Features + Memory)
         # 50*50 + 50*4 + 32 = 2500 + 200 + 32 = 2732
-        self.observation_space = spaces.Box(low=0, high=1, shape=(2732,), dtype=np.float32)
+        self.observation_space = spaces.Box(
+            low=0, high=1, shape=(2732,), dtype=np.float32
+        )
 
         self.current_step = 0
         self.previous_hash = None
@@ -49,10 +51,12 @@ class WebAgentEnv(gym.Env):
         self.current_step += 1
 
         # 1. Usa os elementos capturados no passo anterior para executar a ação
-        if not hasattr(self, '_last_elements'):
+        if not hasattr(self, "_last_elements"):
             self._last_elements = await self.browser.get_interactive_elements()
 
-        success = await self.browser.execute_action(category, element_idx, self._last_elements)
+        success = await self.browser.execute_action(
+            category, element_idx, self._last_elements
+        )
 
         # 2. Captura novo estado (Screenshot + Hash)
         screenshot = await self.browser.capture_state()
@@ -69,7 +73,7 @@ class WebAgentEnv(gym.Env):
         truncated = False
 
         # 1. +10 por atingir o objetivo (Simulado: se a URL mudou ou ação Finish escolhida)
-        if category == 4: # FINISH
+        if category == 4:  # FINISH
             reward = 10
             terminated = True
 

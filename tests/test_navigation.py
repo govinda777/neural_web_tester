@@ -4,7 +4,9 @@ import os
 import logging
 from navigation import BrowserManager
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 
@@ -32,7 +34,9 @@ class TestNavigation(unittest.TestCase):
                     for log in self.browser_manager.console_logs
                 )
             )
-            logger.info(f"Logs de console interceptados com sucesso: {self.browser_manager.console_logs}")
+            logger.info(
+                f"Logs de console interceptados com sucesso: {self.browser_manager.console_logs}"
+            )
 
             # Screenshot não vazio
             logger.info("Capturando screenshot da página ativa...")
@@ -45,7 +49,9 @@ class TestNavigation(unittest.TestCase):
             actions = await self.browser_manager.get_interactive_elements()
             actions = await self.browser_manager.get_interactive_elements()
             self.assertGreater(len(actions), 0)
-            logger.info(f"Foram encontrados {len(actions)} elementos interativos válidos.")
+            logger.info(
+                f"Foram encontrados {len(actions)} elementos interativos válidos."
+            )
 
             # Verificação de prioridades
             # "Salvar" deve ter prioridade 3

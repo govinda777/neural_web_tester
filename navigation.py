@@ -1,6 +1,6 @@
 import os
 from playwright.async_api import async_playwright
-import re
+
 
 class BrowserManager:
     def __init__(self, token=None):
@@ -23,12 +23,13 @@ class BrowserManager:
             extra_headers["Authorization"] = f"Bearer {self.token}"
 
         self.context = await self.browser.new_context(
-            extra_http_headers=extra_headers,
-            viewport={"width": 1280, "height": 720}
+            extra_http_headers=extra_headers, viewport={"width": 1280, "height": 720}
         )
 
         self.page = await self.context.new_page()
-        self.page.on("console", lambda msg: self.console_logs.append(f"[{msg.type}] {msg.text}"))
+        self.page.on(
+            "console", lambda msg: self.console_logs.append(f"[{msg.type}] {msg.text}")
+        )
         self.page.on("response", self._handle_response)
 
         await self.page.goto(url, wait_until="networkidle")
@@ -47,61 +48,81 @@ class BrowserManager:
         Retorna metadados para o encoder.
         """
         # Script JS para atravessar Shadow DOM de forma recursiva
-        js_script = f"""
-        (maxDepth) => {{
+        js_script = """
+        (maxDepth) => {
             const elements = [];
-            const walk = (root, depth, currentParentIdx = null, isShadow = false) => {{
+            const walk = (root, depth, currentParentIdx = null, isShadow = false) => {
                 if (depth > maxDepth) return;
 
-                // Seleciona todos os nós para manter a hierarquia
                 const allNodes = Array.from(root.querySelectorAll('*'));
 
-                // Adiciona o próprio shadow root se ele for o root atual (exceto o document)
-                const children = (root === document) ? Array.from(document.body.children) : Array.from(root.children);
-
-                allNodes.forEach(node => {{
-                    const isInteractive = node.matches('button, a, input, [role="button"], [role="link"]');
+                allNodes.forEach(node => {
+                    const isInteractive = node.matches('button, a, input, select, textarea, [role="button"], [role="link"]');
                     const rect = node.getBoundingClientRect();
                     const isVisible = rect.width > 0 && rect.height > 0;
 
-                    if (isInteractive && isVisible) {{
+                    if (isInteractive && isVisible) {
+                        // Verifica se é um link externo
+                        if (node.tagName === 'A' && node.href && node.href.startsWith('http')) {
+                            try {
+                                const url = new URL(node.href);
+                                if (url.hostname !== window.location.hostname && window.location.hostname !== "") {
+                                     return; // Pula links externos se estivermos em um domínio real
+                                }
+                                // Se for local (file://), ignoramos se tiver um hostname (como google.com)
+                                if (window.location.hostname === "" && url.hostname !== "") {
+                                    return;
+                                }
+                            } catch(e) {}
+                        }
+
+                        // Cálculo de prioridade
+                        let priority = 1;
+                        const tag = node.tagName.toLowerCase();
+                        const role = node.getAttribute('role');
+                        
+                        if (tag === 'button' || role === 'button' || (tag === 'input' && (node.type === 'submit' || node.type === 'button'))) {
+                            priority = 3;
+                        } else if (tag === 'input' || tag === 'select' || tag === 'textarea') {
+                            priority = 2;
+                        }
+
                         const idx = elements.length;
 
-                        // Tenta encontrar o pai na nossa lista de elementos já processados
                         let parentIdx = null;
                         let p = node.parentElement || (node.getRootNode() && node.getRootNode().host);
-                        while (p) {{
+                        while (p) {
                             const foundParent = elements.findIndex(el => el._rawNode === p);
-                            if (foundParent !== -1) {{
+                            if (foundParent !== -1) {
                                 parentIdx = foundParent;
                                 break;
-                            }}
+                            }
                             p = p.parentElement || (p.getRootNode() && p.getRootNode().host);
-                        }}
+                        }
 
-                        elements.push({{
-                            tag: node.tagName.toLowerCase(),
-                            text: node.innerText || node.value || "",
+                        elements.push({
+                            tag: tag,
+                            text: (node.innerText || node.value || "").toLowerCase().trim(),
                             x: (rect.left + rect.width / 2) / window.innerWidth,
                             y: (rect.top + rect.height / 2) / window.innerHeight,
                             is_shadow: isShadow || (node.getRootNode() instanceof ShadowRoot),
                             is_iframe: false,
+                            priority: priority,
                             parent_index: parentIdx,
                             id: node.id || "",
-                            _rawNode: node // Referência temporária para busca de parentesco
-                        }});
-                    }}
+                            _rawNode: node
+                        });
+                    }
 
-                    if (node.shadowRoot) {{
+                    if (node.shadowRoot) {
                         walk(node.shadowRoot, depth + 1, elements.length - 1, true);
-                    }}
-                }});
-            }};
+                    }
+                });
+            };
 
             walk(document, 0);
-            // Limpa a referência circular antes de retornar
-            return elements.map(({{_rawNode, ...rest}}) => rest);
-        }}
+            return elements.map(({_rawNode, ...rest}) => rest);
+        }
         """
 
         # Executa o script no contexto da página principal
@@ -113,11 +134,13 @@ class BrowserManager:
         # Conectamos os metadados aos elementos reais para execução de ações
         for i, meta in enumerate(elements_metadata):
             # Usamos o índice como chave para recuperar o elemento depois
-            meta['index'] = i
+            meta["index"] = i
 
         return elements_metadata
 
-    async def execute_action(self, action_category, element_index, elements_metadata, text_input=""):
+    async def execute_action(
+        self, action_category, element_index, elements_metadata, text_input=""
+    ):
         """Executa a ação escolhida pela rede neural."""
         if element_index >= len(elements_metadata):
             return False
@@ -127,18 +150,18 @@ class BrowserManager:
         # Como o script de avaliação não retorna o objeto JS handle,
         # usamos as coordenadas para clicar ou um seletor robusto.
         # Aqui, usamos coordenadas (x,y) normalizadas de volta para pixels.
-        x = meta['x'] * 1280
-        y = meta['y'] * 720
+        x = meta["x"] * 1280
+        y = meta["y"] * 720
 
         try:
-            if action_category == 0: # CLICK
+            if action_category == 0:  # CLICK
                 await self.page.mouse.click(x, y)
-            elif action_category == 1: # TYPE
+            elif action_category == 1:  # TYPE
                 await self.page.mouse.click(x, y)
                 await self.page.keyboard.type(text_input)
-            elif action_category == 2: # SCROLL
+            elif action_category == 2:  # SCROLL
                 await self.page.mouse.wheel(0, 300)
-            elif action_category == 3: # BACK
+            elif action_category == 3:  # BACK
                 await self.page.go_back()
             # 4 is FINISH (handled by the agent loop)
 

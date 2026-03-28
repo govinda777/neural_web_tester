@@ -3,13 +3,17 @@ import numpy as np
 import logging
 from memory import cosine_similarity, SemanticMemory
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 
 class TestMemory(unittest.TestCase):
     def test_cosine_similarity(self):
-        logger.info("Testando similaridade do cosseno com vetores idênticos e diferentes.")
+        logger.info(
+            "Testando similaridade do cosseno com vetores idênticos e diferentes."
+        )
         v1 = np.array([1, 0, 0])
         v2 = np.array([1, 0, 0])
         self.assertAlmostEqual(cosine_similarity(v1, v2), 1.0)
@@ -36,7 +40,9 @@ class TestMemory(unittest.TestCase):
         # Estado levemente modificado deve ser detectado como já visitado
         v1_noise = v1 + 0.001 * np.random.rand(1280)
         self.assertFalse(memory.is_new_state(v1_noise))
-        logger.info("Estado com ruído leve ignorado com sucesso (considerado revisitado).")
+        logger.info(
+            "Estado com ruído leve ignorado com sucesso (considerado revisitado)."
+        )
 
         # Estado completamente diferente deve ser novo
         logger.info("Testando estado visual completamente diferente.")
