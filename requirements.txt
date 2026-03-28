@@ -1,10 +1,14 @@
 tensorflow
+tensorflow-hub
 playwright
-jinja2
+gymnasium
 numpy
+jinja2
 Pillow
 pytest
 pytest-asyncio
 ruff
 python-dotenv
-pytest-html
+pytest-bdd
+allure-pytest
+setuptools<70

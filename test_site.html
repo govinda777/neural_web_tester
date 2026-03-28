@@ -400,9 +400,50 @@
             </div>
         </section>
 
+        <!-- Stress Test de Shadow DOM (5 níveis) -->
+        <section class="card" id="shadow-stress-test">
+            <h2>Stress Test: Shadow DOM Deep Dive</h2>
+            <div id="shadow-root-level-1"></div>
+        </section>
+
     </main>
 
     <script>
+        // Injeção de Shadow DOM de 5 níveis
+        const createDeepShadow = () => {
+            const l1 = document.getElementById('shadow-root-level-1');
+            const s1 = l1.attachShadow({mode: 'open'});
+            s1.innerHTML = `<div id="l2" style="padding: 10px; border: 1px solid #333;">Nível 1 <div id="target-l2"></div></div>`;
+
+            const l2 = s1.getElementById('target-l2');
+            const s2 = l2.attachShadow({mode: 'open'});
+            s2.innerHTML = `<div id="l3" style="padding: 10px; border: 1px solid #444;">Nível 2 <div id="target-l3"></div></div>`;
+
+            const l3 = s2.getElementById('target-l3');
+            const s3 = l3.attachShadow({mode: 'open'});
+            s3.innerHTML = `<div id="l4" style="padding: 10px; border: 1px solid #555;">Nível 3 <div id="target-l4"></div></div>`;
+
+            const l4 = s3.getElementById('target-l4');
+            const s4 = l4.attachShadow({mode: 'open'});
+            s4.innerHTML = `<div id="l5" style="padding: 10px; border: 1px solid #666;">Nível 4 <div id="target-l5"></div></div>`;
+
+            const l5 = s4.getElementById('target-l5');
+            const s5 = l5.attachShadow({mode: 'open'});
+            s5.innerHTML = `
+                <div style="padding: 10px; border: 1px solid #777;">
+                    Nível 5 (Deepest)
+                    <button id="deep-button" class="btn btn-primary" style="margin-top: 10px;">Click hidden button</button>
+                </div>
+            `;
+
+            s5.getElementById('deep-button').addEventListener('click', () => {
+                console.log("Deep Shadow Button Clicked!");
+                alert("Goal Reached in Deep Shadow!");
+            });
+        };
+
+        createDeepShadow();
+
         // Evento requerido pelo teste do agente para simular lógica
         document.getElementById('save-btn').addEventListener('click', () => {
             console.log("Sistema central reativo executou a rotina de SALVAR de forma assíncrona!");
