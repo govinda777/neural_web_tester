@@ -12,3 +12,7 @@ python-dotenv
 pytest-bdd
 allure-pytest
 setuptools<70
+fastapi
+uvicorn
+websockets
+pydantic

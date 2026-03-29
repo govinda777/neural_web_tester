@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from model import load_reasoning_engine, get_use_model
 from web_agent_env import WebAgentEnv
 from report import ReportGenerator, Evidence
+from telemetry import TelemetryManager
 
 
 class NeuralAgent:
@@ -25,17 +26,35 @@ class NeuralAgent:
         self.use_model = get_use_model()
 
         self.reporter = ReportGenerator()
+        self.telemetry = TelemetryManager()
 
     async def run(self, train=False):
         """Loop principal do agente usando a política da rede neural."""
         print(f"Iniciando Agente RL em: {self.url}")
         print(f"Objetivo Gherkin: {self.bdd_step}")
 
+        # 0. Inicializa Telemetria
+        await self.telemetry.connect()
+        await self.telemetry.init_session(self.url, self.bdd_step)
+
         # 1. Gera embedding do objetivo (When Gherkin)
         bdd_embedding = self.use_model([self.bdd_step]).numpy()
 
         # 2. Reset do Ambiente
         obs, info = await self.env.async_reset()
+
+        # Envia estado inicial para telemetria
+        screenshot = await self.env.browser.capture_state()
+        await self.telemetry.send_step(
+            step_number=0,
+            state_hash=self.env.previous_hash,
+            screenshot_bytes=screenshot,
+            action=None,
+            observation={
+                "top_candidates": self._get_top_candidates(tf.zeros((1, self.action_dim)), self.env._last_elements),
+                "features_weights": {} # Reset não tem pesos de decisão ainda
+            }
+        )
 
         terminated = False
         truncated = False
@@ -76,6 +95,29 @@ class NeuralAgent:
                     action
                 )
 
+                # 5. Coleta de Metadados para Telemetria
+                # Calculamos a importância das features de forma simplificada:
+                # Pegamos o vetor de estado do elemento escolhido e multiplicamos pelos pesos da camada densa
+                # (Simplificação: apenas os valores brutos para esta fase)
+                feature_importance = self._get_feature_importance(obs, target_idx)
+
+                # Envia para o Dashboard
+                screenshot = await self.env.browser.capture_state()
+                await self.telemetry.send_step(
+                    step_number=step,
+                    state_hash=self.env.previous_hash,
+                    screenshot_bytes=screenshot,
+                    action={
+                        "element_id": int(target_idx),
+                        "type": ["CLICK", "TYPE", "SCROLL", "BACK", "FINISH"][category],
+                        "confidence": float(cat_probs.numpy()[0][category] * target_probs.numpy()[0][target_idx])
+                    },
+                    observation={
+                        "top_candidates": self._get_top_candidates(target_probs, self.env._last_elements),
+                        "features_weights": feature_importance
+                    }
+                )
+
                 # 4.1 Update básico (online learning simulado)
                 if train:
                     with tf.GradientTape() as tape:
@@ -91,8 +133,7 @@ class NeuralAgent:
                         zip(grads, self.model.trainable_variables)
                     )
 
-                # 5. Coleta de Evidências (Dashboard do Agente)
-                screenshot = await self.env.browser.capture_state()
+                # 6. Coleta de Evidências (Relatório Estático)
                 evidence = Evidence(
                     url=self.env.browser.page.url,
                     screenshot_bytes=screenshot,
@@ -111,8 +152,40 @@ class NeuralAgent:
 
         finally:
             self.reporter.generate()
+            await self.telemetry.close()
             await self.env.close()
             print("Execução finalizada.")
+
+    def _get_top_candidates(self, target_probs, elements):
+        probs = target_probs.numpy()[0]
+        top_indices = np.argsort(probs)[-5:][::-1]
+        candidates = []
+        for idx in top_indices:
+            if idx < len(elements):
+                el = elements[idx]
+                candidates.append({
+                    "id": int(idx),
+                    "prob": float(probs[idx]),
+                    "coords": [el["x"], el["y"], el.get("w", 0.05), el.get("h", 0.02)],
+                    "label": f"{el['tag']} {el['text'][:10]}"
+                })
+        return candidates
+
+    def _get_feature_importance(self, obs, element_idx):
+        # O encoder coloca features em: adj_matrix(2500) + features(200) + memory(32)
+        # No encoder.py, as features são concatenadas APÓS a adj_matrix.
+        # features: x, y, is_shadow, is_iframe para cada um dos 50 elementos.
+        if element_idx < 50:
+            start = 2500 + element_idx * 4
+            # Garantir que não passamos do tamanho do vetor (2500 + 200 = 2700)
+            feat_values = obs[start : start + 4]
+            return {
+                "pos_x": float(feat_values[0]),
+                "pos_y": float(feat_values[1]),
+                "is_shadow": float(feat_values[2]),
+                "is_iframe": float(feat_values[3]),
+            }
+        return {}
 
 
 async def main():
