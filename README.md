@@ -1,5 +1,7 @@
 # Neural Web Tester 🤖🌐
 
+![banner](./banner.png)
+
 O **Neural Web Tester** é um projeto educacional focado em ensinar desenvolvedores a implementarem redes neurais simples na prática. Ele utiliza o pretexto de uma ferramenta CLI de exploração autônoma de aplicações web para demonstrar conceitos de Visão Computacional e Memória Semântica.
 
 > **Objetivo:** Desmistificar o uso de IA (MobileNetV2) e Geometria Vetorial em aplicações reais de engenharia de software.
