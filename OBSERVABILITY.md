@@ -109,7 +109,7 @@ python3 agent.py --url https://meusite.com --bdd "Ao clicar em Login"
 
 ## 📸 Demonstração da Interface
 
-![Dashboard Overview](docs/images/dashboard_real.png)
+![Dashboard Overview](docs/images/final_dashboard.png)
 
 A imagem acima demonstra o Dashboard em pleno funcionamento:
 - **Painel Central:** O screenshot real do `test_site.html` com um overlay SVG destacando o elemento alvo em rosa (ID do botão Confirmar).
@@ -130,6 +130,13 @@ PYTHONPATH=. pytest tests/test_observability_unit.py
 Verifica se o agente comunica corretamente com o backend usando cenários Gherkin.
 ```bash
 PYTHONPATH=. pytest tests/step_defs/test_observability.py
+```
+
+### 3. Testes BDD E2E (Interface do Dashboard)
+Valida se o Dashboard renderiza corretamente os dados reais do agente (screenshots, grafos, features).
+```bash
+# Certifique-se de que o servidor e o dashboard estão rodando (task dashboard)
+PYTHONPATH=. pytest tests/step_defs/test_dashboard_ui.py
 ```
 
 > **Nota:** Esta camada foi projetada para ser leve e não interferir no treinamento do modelo RL, operando de forma assíncrona.
