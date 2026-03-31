@@ -50,3 +50,11 @@ tasks:
         platforms: [windows]
       - cmd: powershell -Command "Get-ChildItem -Path . -Include *.log -Recurse -File -ErrorAction SilentlyContinue | Remove-Item -Force"
         platforms: [windows]
+
+  dashboard:
+    desc: "Inicia o servidor de telemetria e o dashboard frontend"
+    cmds:
+      - cmd: '{{.PYTHON}} observability/server.py'
+        platforms: [windows, linux, darwin]
+      - cmd: cd observability/frontend && npm install && npm run dev
+        platforms: [windows, linux, darwin]

@@ -109,7 +109,27 @@ python3 agent.py --url https://meusite.com --bdd "Ao clicar em Login"
 
 ## 📸 Demonstração da Interface
 
-![Dashboard Overview](https://raw.githubusercontent.com/username/repo/branch/docs/dashboard_screenshot.png)
-*(Substitua pela URL real do print de tela gerado no step de verificação)*
+![Dashboard Overview](docs/images/dashboard_real.png)
+
+A imagem acima demonstra o Dashboard em pleno funcionamento:
+- **Painel Central:** O screenshot real do `test_site.html` com um overlay SVG destacando o elemento alvo em rosa (ID do botão Confirmar).
+- **Intenção do Agente:** Mostra que o agente escolheu a ação `FINISH` com seus metadados.
+- **Pesos das Features:** Lista as propriedades do elemento que influenciaram o modelo.
+- **Mapa Mental:** (Abaixo) Mostra os nós de estado percorridos.
+
+## 🧪 Suíte de Testes (BDD e Unitários)
+
+Para garantir a confiabilidade da telemetria, implementamos testes rigorosos:
+
+### 1. Testes de Unidade (FastAPI & SQLite)
+```bash
+PYTHONPATH=. pytest tests/test_observability_unit.py
+```
+
+### 2. Testes BDD (Integração de Fluxo)
+Verifica se o agente comunica corretamente com o backend usando cenários Gherkin.
+```bash
+PYTHONPATH=. pytest tests/step_defs/test_observability.py
+```
 
 > **Nota:** Esta camada foi projetada para ser leve e não interferir no treinamento do modelo RL, operando de forma assíncrona.

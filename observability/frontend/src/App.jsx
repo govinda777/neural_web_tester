@@ -10,7 +10,27 @@ const App = () => {
   const [ws, setWs] = useState(null);
   const [isLive, setIsLive] = useState(true);
 
+  const fetchSessionData = async () => {
+    try {
+      const sessionsRes = await fetch('http://localhost:8000/sessions');
+      const sessions = await sessionsRes.json();
+      if (sessions.length > 0) {
+        const latestSession = sessions[0];
+        setSession(latestSession);
+
+        const stepsRes = await fetch(`http://localhost:8000/sessions/${latestSession.id}/steps`);
+        const sessionSteps = await stepsRes.json();
+        setSteps(sessionSteps);
+        setCurrentStepIdx(sessionSteps.length > 0 ? sessionSteps.length - 1 : 0);
+      }
+    } catch (e) {
+      console.error("Erro ao buscar dados iniciais:", e);
+    }
+  };
+
   useEffect(() => {
+    fetchSessionData();
+
     const socket = new WebSocket('ws://localhost:8000/ws');
 
     socket.onopen = () => {
@@ -24,19 +44,14 @@ const App = () => {
         setSteps([]);
         setCurrentStepIdx(0);
       } else if (message.type === 'step_update') {
-        setSteps(prev => {
-          const newSteps = [...prev, message.data];
-          // Use current isLive state from the component's state during message handling
-          return newSteps;
-        });
+        setSteps(prev => [...prev, message.data]);
       }
     };
 
     setWs(socket);
     return () => socket.close();
-  }, []); // Run only once
+  }, []);
 
-  // Separately handle step updates when steps change or isLive changes
   useEffect(() => {
     if (isLive && steps.length > 0) {
       setCurrentStepIdx(steps.length - 1);
@@ -72,23 +87,25 @@ const App = () => {
       </header>
 
       <main className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-8 overflow-hidden">
-        {/* Painel Central: Preview e Timeline */}
         <section className="lg:col-span-2 space-y-6 flex flex-col min-h-0">
-          <div className="flex-1 bg-white dark:bg-gray-900 rounded-xl shadow-xl overflow-hidden border border-gray-200 dark:border-gray-800">
-            <LivePreview stepData={currentStep} />
+          <div className="flex-1 bg-white dark:bg-gray-900 rounded-xl shadow-xl overflow-hidden border border-gray-200 dark:border-gray-800 flex items-center justify-center">
+            {currentStep ? (
+                <LivePreview stepData={currentStep} />
+            ) : (
+                <div className="text-gray-500 animate-pulse">Aguardando telemetria...</div>
+            )}
           </div>
 
-          {/* Timeline Control */}
           <div className="p-6 bg-white dark:bg-gray-900 rounded-xl shadow-lg border border-gray-200 dark:border-gray-800">
             <div className="flex justify-between items-center mb-4">
               <span className="text-sm font-medium">Fluxo Temporal (Passos)</span>
-              <span className="text-sm text-blue-500 font-bold">{currentStepIdx + 1} / {steps.length}</span>
+              <span className="text-sm text-blue-500 font-bold">{steps.length > 0 ? currentStepIdx + 1 : 0} / {steps.length}</span>
             </div>
             <input
               type="range"
               min="0"
               max={Math.max(0, steps.length - 1)}
-              value={currentStepIdx}
+              value={steps.length > 0 ? currentStepIdx : 0}
               onChange={(e) => {
                 setIsLive(false);
                 setCurrentStepIdx(parseInt(e.target.value));
@@ -98,9 +115,7 @@ const App = () => {
           </div>
         </section>
 
-        {/* Barra Lateral: Decisões e Features */}
         <aside className="space-y-6 overflow-y-auto pr-2 custom-scrollbar">
-          {/* Action Card */}
           <div className="p-6 bg-white dark:bg-gray-900 rounded-xl shadow-lg border border-gray-200 dark:border-gray-800">
             <h3 className="text-sm font-bold uppercase tracking-wider text-gray-500 mb-4">Intenção do Agente</h3>
             {currentStep?.action ? (
@@ -112,25 +127,19 @@ const App = () => {
                             <div className="text-xl font-mono text-green-500">{(currentStep.action.confidence * 100).toFixed(1)}%</div>
                         </div>
                     </div>
-                    <div className="text-xs p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300 rounded-lg border border-blue-100 dark:border-blue-900/50 italic leading-relaxed">
-                        "O agente identificou que {currentStep.action.type} no elemento ID {currentStep.action.element_id} é o caminho mais provável para atingir o objetivo Gherkin."
-                    </div>
                 </div>
             ) : (
-                <div className="text-gray-400 italic text-sm py-4">Nenhuma ação registrada neste passo (Reset / Inicialização)</div>
+                <div className="text-gray-400 italic text-sm py-4">Nenhuma ação registrada</div>
             )}
           </div>
 
-          {/* Feature Monitor */}
           <div className="bg-white dark:bg-gray-900 rounded-xl shadow-lg border border-gray-200 dark:border-gray-800 overflow-hidden">
             <FeatureImportance weights={currentStep?.observation?.features_weights} />
           </div>
 
-          {/* State Graph */}
           <div className="p-6 bg-white dark:bg-gray-900 rounded-xl shadow-lg border border-gray-200 dark:border-gray-800">
             <h3 className="text-sm font-bold uppercase tracking-wider text-gray-500 mb-4 text-left">Mapa Mental de Estados</h3>
             <StateGraph steps={steps} />
-            <p className="text-[10px] text-gray-400 mt-2 italic text-left">Nós representam hashes do DOM; arestas mostram transições por ação.</p>
           </div>
         </aside>
       </main>
