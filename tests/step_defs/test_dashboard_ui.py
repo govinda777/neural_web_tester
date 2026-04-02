@@ -18,13 +18,22 @@ def run_agent_cuj():
     url = f"file://{os.getcwd()}/test_site.html"
     agent = NeuralAgent(url=url, bdd_step="Navegar no Dashboard", max_steps=2)
 
-    loop = asyncio.get_event_loop()
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    
     loop.run_until_complete(agent.run())
     return agent.telemetry.session_id
 
 @then('eu acesso o dashboard em "http://localhost:3000"', target_fixture="dashboard_page")
 def access_dashboard():
-    loop = asyncio.get_event_loop()
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
 
     async def _access():
         pw = await async_playwright().start()
@@ -40,7 +49,11 @@ def access_dashboard():
 @then("eu devo ver o screenshot da página no componente LivePreview")
 def verify_screenshot(dashboard_page):
     page = dashboard_page["page"]
-    loop = asyncio.get_event_loop()
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
 
     async def _verify():
         img = page.locator('img[alt="Agent View"]')
@@ -54,7 +67,11 @@ def verify_screenshot(dashboard_page):
 @then("eu devo ver as barras de importância de features")
 def verify_features(dashboard_page):
     page = dashboard_page["page"]
-    loop = asyncio.get_event_loop()
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
 
     async def _verify():
         bars = page.locator('div.bg-blue-500, div.bg-red-400')
@@ -66,7 +83,11 @@ def verify_features(dashboard_page):
 @then("o mapa mental de estados deve conter pelo menos 2 nós")
 def verify_state_graph(dashboard_page):
     page = dashboard_page["page"]
-    loop = asyncio.get_event_loop()
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
 
     async def _verify():
         nodes = page.locator('.react-flow__node')

@@ -2,7 +2,7 @@ import pytest
 import sqlite3
 import os
 import asyncio
-from pytest_bdd import scenario, given, when, then
+from pytest_bdd import scenario, given, when, then, parsers
 from agent import NeuralAgent
 from observability.server import init_db, save_session, save_step
 import json
@@ -23,9 +23,10 @@ def test_observability_flow():
 def server_active():
     pass
 
-@when('o agente inicia um teste na URL "file:///app/test_site.html" com objetivo "Testar Observabilidade"', target_fixture="agent_context")
-def start_agent_test():
-    agent = NeuralAgent(url="file:///app/test_site.html", bdd_step="Testar Observabilidade", max_steps=1)
+@when(parsers.parse('o agente inicia um teste na URL "{url}" com objetivo "Testar Observabilidade"'), target_fixture="agent_context")
+def start_agent_test(url):
+    url = f"file://{os.path.abspath('test_site.html')}"
+    agent = NeuralAgent(url=url, bdd_step="Testar Observabilidade", max_steps=1)
     # Mock do _send para salvar diretamente no SQLite
     async def mock_send(message):
         if message["type"] == "init_session":

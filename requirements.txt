@@ -16,3 +16,4 @@ fastapi
 uvicorn
 websockets
 pydantic
+httpx
