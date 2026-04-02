@@ -43,37 +43,53 @@ Este repositório foi desenhado para ser um guia de estudo. Comece por aqui:
    # Edite o arquivo .env com suas chaves e tokens
    ```
 
-## 🛠️ Guia de Uso
+## 🛠️ Guia de Uso (Dashboard Web)
 
-Para iniciar uma exploração autônoma em um site:
+Agora você pode controlar o agente através de uma interface web intuitiva:
+
+1. Inicie a Bridge API:
+   ```bash
+   task api:dev
+   ```
+
+2. Inicie o Frontend:
+   ```bash
+   task web:dev
+   ```
+
+3. Acesse `http://localhost:3000` no seu navegador. Insira a URL de destino e o objetivo Gherkin para começar.
+
+### Uso via CLI
+
+Se preferir, você ainda pode rodar o agente diretamente:
 
 ```bash
-python agent.py --url https://exemplo.com --steps 10
+task agent:run URL=https://exemplo.com BDD="Explorar site" STEPS=10
 ```
-
-### Argumentos da CLI
-- `--url`: (Obrigatório) URL inicial para a exploração.
-- `--token`: Token JWT para injeção de autenticação (Pode ser configurado no `.env` como `AGENT_TOKEN`).
-- `--steps`: Número máximo de passos que o agente deve realizar (Padrão: 10).
 
 ## 🏗️ Estrutura do Projeto
 
-- `agent.py`: Ponto de entrada da CLI e orquestrador do loop de exploração.
-- `navigation.py`: Gerenciamento do navegador via Playwright e extração de elementos interativos.
-- `perception.py`: Camada de visão computacional (MobileNetV2) para extração de embeddings de imagens.
-- `memory.py`: Lógica de memória semântica baseada em similaridade de cosseno.
-- `report.py`: Gerador de relatórios HTML com as evidências coletadas (fotos, logs e erros).
-- `templates/`: Templates Jinja2 para a geração do relatório.
-- `tests/`: Suíte de testes unitários.
+- `src/`: Core do projeto em Python.
+  - `agent.py`: Orquestrador do loop de exploração do agente.
+  - `api.py`: Ponte FastAPI para controle via web.
+  - `navigation.py`: Gerenciamento do navegador via Playwright.
+  - `perception.py`: Camada de visão computacional (MobileNetV2).
+  - `model.py`: Redes neurais de raciocínio.
+- `web/`: Dashboard Next.js / Tailwind para controle do agente.
+- `templates/`: Templates Jinja2 para relatórios offline.
+- `tests/`: Suíte de testes automatizados (BDD e Unitários).
 
 ## 🧪 Desenvolvimento e Automação
 
-O projeto utiliza o **Task** (`Taskfile.yml`) de forma multiplataforma (Windows, Linux, macOS) para padronizar comandos comuns:
+O projeto utiliza o **Task** (`Taskfile.yml`) para padronizar comandos comuns:
 
-- `task install`: Instala dependências Python e navegadores Playwright.
-- `task test`: Executa todos os testes unitários via pytest. Use `task test REPORT=true` para abrir o relatório após a execução.
-- `task lint`: Verifica o estilo do código usando **Ruff**.
-- `task clean`: Limpa caches recursivos, logs e arquivos temporários.
+- `task install`: Instala dependências Python e Node.js.
+- `task web:dev`: Roda o frontend Next.js.
+- `task api:dev`: Roda a API de ponte.
+- `task dev`: Sobe ambos (Frontend e API) simultaneamente.
+- `task test`: Executa os testes automatizados.
+- `task lint`: Verifica o estilo do código.
+- `task clean`: Limpa arquivos temporários e logs.
 
 ## ⚠️ Troubleshooting (Resolução de Problemas)
 

@@ -1,6 +1,6 @@
 import asyncio
 import os
-from navigation import BrowserManager
+from src.navigation import BrowserManager
 
 
 async def debug_elements():

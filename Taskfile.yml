@@ -5,10 +5,11 @@ vars:
 
 tasks:
   install:
-    desc: "Instala as dependências do Python e o navegador para o Playwright"
+    desc: "Instala as dependências do Python, o navegador para o Playwright e dependências do frontend"
     cmds:
       - '{{.PYTHON}} -m pip install -r requirements.txt'
       - '{{.PYTHON}} -m playwright install chromium'
+      - cd web && npm install
 
   test:
     desc: "Executa a suíte de testes. Parâmetro (REPORT=true) para abrir o relatório após a execução."
@@ -37,16 +38,43 @@ tasks:
   clean:
     desc: "Remove arquivos temporários, logs e caches"
     cmds:
-      - cmd: rm -rf screenshots videos .pytest_cache .ruff_cache reports/test_report.html
+      - cmd: rm -rf screenshots videos .pytest_cache .ruff_cache reports/test_report.html telemetry.db
         platforms: [linux, darwin]
       - cmd: find . -type d -name "__pycache__" -exec rm -rf {} +
         platforms: [linux, darwin]
       - cmd: find . -type f -name "*.log" -delete
         platforms: [linux, darwin]
       # Comandos nativos para Windows (PowerShell)
-      - cmd: powershell -Command "Remove-Item -Recurse -Force screenshots, videos, reports/test_report.html, .pytest_cache, .ruff_cache -ErrorAction SilentlyContinue"
+      - cmd: powershell -Command "Remove-Item -Recurse -Force screenshots, videos, reports/test_report.html, .pytest_cache, .ruff_cache, telemetry.db -ErrorAction SilentlyContinue"
         platforms: [windows]
       - cmd: powershell -Command "Get-ChildItem -Path . -Include __pycache__ -Recurse -Directory -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force"
         platforms: [windows]
       - cmd: powershell -Command "Get-ChildItem -Path . -Include *.log -Recurse -File -ErrorAction SilentlyContinue | Remove-Item -Force"
         platforms: [windows]
+
+  web:dev:
+    desc: "Inicia o servidor de desenvolvimento do Next.js"
+    cmds:
+      - cd web && npm run dev
+
+  api:dev:
+    desc: "Inicia o servidor FastAPI (Bridge API)"
+    cmds:
+      - '{{.PYTHON}} -m uvicorn src.api:app --host 0.0.0.0 --port 8000 --reload'
+
+  agent:run:
+    desc: "Executa o agente via CLI"
+    vars:
+      URL: '{{default "https://google.com" .URL}}'
+      BDD: '{{default "Navegar no site" .BDD}}'
+      STEPS: '{{default "10" .STEPS}}'
+    env:
+      PYTHONPATH: .
+    cmds:
+      - '{{.PYTHON}} -m src.agent --url {{.URL}} --bdd "{{.BDD}}" --steps {{.STEPS}}'
+
+  dev:
+    desc: "Inicia simultaneamente o frontend e a API"
+    deps:
+      - api:dev
+      - web:dev

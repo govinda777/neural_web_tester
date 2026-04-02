@@ -3,9 +3,9 @@ import asyncio
 import numpy as np
 import tensorflow as tf
 from dotenv import load_dotenv
-from model import load_reasoning_engine, get_use_model
-from web_agent_env import WebAgentEnv
-from report import ReportGenerator, Evidence
+from src.model import load_reasoning_engine, get_use_model
+from src.web_agent_env import WebAgentEnv
+from src.report import ReportGenerator, Evidence
 
 
 class NeuralAgent:
@@ -26,7 +26,7 @@ class NeuralAgent:
 
         self.reporter = ReportGenerator()
 
-    async def run(self, train=False):
+    async def run(self, train=False, stop_event=None):
         """Loop principal do agente usando a política da rede neural."""
         print(f"Iniciando Agente RL em: {self.url}")
         print(f"Objetivo Gherkin: {self.bdd_step}")
@@ -45,6 +45,9 @@ class NeuralAgent:
 
         try:
             while not (terminated or truncated):
+                if stop_event and stop_event.is_set():
+                    print("Interrupção solicitada pelo usuário.")
+                    break
                 step += 1
                 print(f"--- Passo {step} ---")
 

@@ -1,8 +1,8 @@
 import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
-from navigation import BrowserManager
-from encoder import DOMEncoder
+from src.navigation import BrowserManager
+from src.encoder import DOMEncoder
 
 
 class WebAgentEnv(gym.Env):

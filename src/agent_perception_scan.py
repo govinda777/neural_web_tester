@@ -1,7 +1,7 @@
 import asyncio
 import os
 import datetime
-from navigation import BrowserManager
+from src.navigation import BrowserManager
 
 
 async def perform_perception_scan():
