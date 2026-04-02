@@ -28,6 +28,15 @@ tasks:
         platforms: [linux]
         ignore_error: true
 
+  test:ui:
+    desc: "Executa os testes em modo visual (mostra o navegador)"
+    env:
+      PYTHONPATH: .
+      HEADLESS: "false"
+    cmds:
+      - '{{.PYTHON}} -m pytest tests/'
+
+
   lint:
     desc: "Executa a verificação e formatação de estilo (Ruff)"
     cmds:
@@ -50,3 +59,13 @@ tasks:
         platforms: [windows]
       - cmd: powershell -Command "Get-ChildItem -Path . -Include *.log -Recurse -File -ErrorAction SilentlyContinue | Remove-Item -Force"
         platforms: [windows]
+
+  dashboard:
+    desc: "Inicia o servidor de telemetria e o dashboard frontend"
+    cmds:
+      - cmd: powershell -Command "Start-Process cmd -ArgumentList '/c {{.PYTHON}} observability/server.py' -WindowStyle Hidden"
+        platforms: [windows]
+      - cmd: '{{.PYTHON}} observability/server.py &'
+        platforms: [linux, darwin]
+      - cmd: cd observability/frontend && npm install && npm run dev
+        platforms: [windows, linux, darwin]

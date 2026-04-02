@@ -154,6 +154,9 @@ class BrowserManager:
         y = meta["y"] * 720
 
         try:
+            # Highlight do elemento antes de agir
+            await self.highlight_element(meta)
+
             if action_category == 0:  # CLICK
                 await self.page.mouse.click(x, y)
             elif action_category == 1:  # TYPE
@@ -170,6 +173,55 @@ class BrowserManager:
         except Exception as e:
             print(f"Erro ao executar ação {action_category}: {e}")
             return False
+
+    async def highlight_element(self, meta):
+        """Desenha um bounding box temporário e um flash no elemento."""
+        js_highlight = """
+        (meta) => {
+            let overlay = document.getElementById('agent-overlay-container');
+            if (!overlay) {
+                overlay = document.createElement('div');
+                overlay.id = 'agent-overlay-container';
+                overlay.style.position = 'fixed';
+                overlay.style.top = '0';
+                overlay.style.left = '0';
+                overlay.style.width = '100vw';
+                overlay.style.height = '100vh';
+                overlay.style.pointerEvents = 'none';
+                overlay.style.zIndex = '999999';
+                document.body.appendChild(overlay);
+            }
+
+            // Limpa highlights anteriores
+            overlay.innerHTML = '';
+
+            const box = document.createElement('div');
+            box.style.position = 'absolute';
+            box.style.left = (meta.x * 100) + '%';
+            box.style.top = (meta.y * 100) + '%';
+            box.style.width = '40px'; // Aproximação se não tivermos rect real
+            box.style.height = '20px';
+            box.style.border = '2px solid #ff00ff';
+            box.style.boxShadow = '0 0 10px #ff00ff';
+            box.style.borderRadius = '4px';
+            box.style.transform = 'translate(-50%, -50%)';
+
+            // Efeito Flash
+            box.animate([
+                { opacity: 1, transform: 'translate(-50%, -50%) scale(1)' },
+                { opacity: 0.5, transform: 'translate(-50%, -50%) scale(1.5)' },
+                { opacity: 1, transform: 'translate(-50%, -50%) scale(1)' }
+            ], { duration: 500, iterations: 2 });
+
+            overlay.appendChild(box);
+
+            // Remove após 1.5s
+            setTimeout(() => {
+                if (box.parentElement) box.remove();
+            }, 1500);
+        }
+        """
+        await self.page.evaluate(js_highlight, meta)
 
     async def close(self):
         if self.browser:
