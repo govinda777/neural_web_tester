@@ -43,6 +43,18 @@ def init_db():
             FOREIGN KEY (session_id) REFERENCES sessions(id)
         )
     """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS episodes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            session_id TEXT,
+            episode_number INTEGER,
+            total_reward REAL,
+            avg_loss REAL,
+            steps_taken INTEGER,
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (session_id) REFERENCES sessions(id)
+        )
+    """)
     conn.commit()
     conn.close()
 
@@ -99,6 +111,23 @@ async def get_steps(session_id: str):
     conn.close()
     return steps
 
+@app.get("/sessions/{session_id}/episodes")
+async def get_episodes(session_id: str):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("SELECT episode_number, total_reward, avg_loss, steps_taken, timestamp FROM episodes WHERE session_id = ? ORDER BY episode_number ASC", (session_id,))
+    episodes = []
+    for r in cursor.fetchall():
+        episodes.append({
+            "episode": r[0],
+            "total_reward": r[1],
+            "avg_loss": r[2],
+            "steps_taken": r[3],
+            "timestamp": r[4]
+        })
+    conn.close()
+    return episodes
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await manager.connect(websocket)
@@ -112,6 +141,8 @@ async def websocket_endpoint(websocket: WebSocket):
                 save_session(message["data"])
             elif message.get("type") == "step_update":
                 save_step(message["data"])
+            elif message.get("type") == "episode_summary":
+                save_episode(message["data"])
 
             # Retransmite para todos os clientes (Dashboard)
             await manager.broadcast(data)
@@ -139,6 +170,22 @@ def save_step(data):
         data.get("screenshot_base64"),
         json.dumps(data.get("action")),
         json.dumps(data.get("observation"))
+    ))
+    conn.commit()
+    conn.close()
+
+def save_episode(data):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO episodes (session_id, episode_number, total_reward, avg_loss, steps_taken)
+        VALUES (?, ?, ?, ?, ?)
+    """, (
+        data["session_id"],
+        data["episode"],
+        data["total_reward"],
+        data["avg_loss"],
+        data["steps_taken"]
     ))
     conn.commit()
     conn.close()

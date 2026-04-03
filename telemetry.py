@@ -51,6 +51,19 @@ class TelemetryManager:
         }
         await self._send(message)
 
+    async def send_episode_summary(self, episode: int, total_reward: float, avg_loss: float, steps_taken: int):
+        message = {
+            "type": "episode_summary",
+            "data": {
+                "session_id": self.session_id,
+                "episode": episode,
+                "total_reward": total_reward,
+                "avg_loss": avg_loss,
+                "steps_taken": steps_taken
+            }
+        }
+        await self._send(message)
+
     async def _send(self, message: dict):
         if self.ws:
             try:

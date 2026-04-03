@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import LivePreview from './components/LivePreview';
 import FeatureImportance from './components/FeatureImportance';
 import StateGraph from './components/StateGraph';
+import LearningCurves from './components/LearningCurves';
 
 const App = () => {
   const [session, setSession] = useState(null);
   const [steps, setSteps] = useState([]);
+  const [episodes, setEpisodes] = useState([]);
   const [currentStepIdx, setCurrentStepIdx] = useState(0);
   const [ws, setWs] = useState(null);
   const [isLive, setIsLive] = useState(true);
@@ -22,6 +24,10 @@ const App = () => {
         const sessionSteps = await stepsRes.json();
         setSteps(sessionSteps);
         setCurrentStepIdx(sessionSteps.length > 0 ? sessionSteps.length - 1 : 0);
+
+        const episodesRes = await fetch(`http://localhost:8000/sessions/${latestSession.id}/episodes`);
+        const sessionEpisodes = await episodesRes.json();
+        setEpisodes(sessionEpisodes);
       }
     } catch (e) {
       console.error("Erro ao buscar dados iniciais:", e);
@@ -42,9 +48,12 @@ const App = () => {
       if (message.type === 'init_session') {
         setSession(message.data);
         setSteps([]);
+        setEpisodes([]);
         setCurrentStepIdx(0);
       } else if (message.type === 'step_update') {
         setSteps(prev => [...prev, message.data]);
+      } else if (message.type === 'episode_summary') {
+        setEpisodes(prev => [...prev, message.data]);
       }
     };
 
@@ -87,8 +96,8 @@ const App = () => {
       </header>
 
       <main className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-8 overflow-hidden">
-        <section className="lg:col-span-2 space-y-6 flex flex-col min-h-0">
-          <div className="flex-1 bg-white dark:bg-gray-900 rounded-xl shadow-xl overflow-hidden border border-gray-200 dark:border-gray-800 flex items-center justify-center">
+        <section className="lg:col-span-2 space-y-6 flex flex-col min-h-0 custom-scrollbar overflow-y-auto pr-2">
+          <div className="min-h-[400px] flex-shrink-0 bg-white dark:bg-gray-900 rounded-xl shadow-xl overflow-hidden border border-gray-200 dark:border-gray-800 flex items-center justify-center">
             {currentStep ? (
                 <LivePreview stepData={currentStep} />
             ) : (
@@ -96,7 +105,7 @@ const App = () => {
             )}
           </div>
 
-          <div className="p-6 bg-white dark:bg-gray-900 rounded-xl shadow-lg border border-gray-200 dark:border-gray-800">
+          <div className="p-6 bg-white dark:bg-gray-900 rounded-xl shadow-lg border border-gray-200 dark:border-gray-800 flex-shrink-0">
             <div className="flex justify-between items-center mb-4">
               <span className="text-sm font-medium">Fluxo Temporal (Passos)</span>
               <span className="text-sm text-blue-500 font-bold">{steps.length > 0 ? currentStepIdx + 1 : 0} / {steps.length}</span>
@@ -112,6 +121,14 @@ const App = () => {
               }}
               className="w-full h-2 bg-gray-200 dark:bg-gray-800 rounded-lg appearance-none cursor-pointer accent-blue-500"
             />
+          </div>
+
+          <div className="mt-8">
+            <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
+              <div className="w-2 h-6 bg-blue-500 rounded-full"></div>
+              Saúde do Treinamento (Learning Curves)
+            </h2>
+            <LearningCurves episodeData={episodes} />
           </div>
         </section>
 
